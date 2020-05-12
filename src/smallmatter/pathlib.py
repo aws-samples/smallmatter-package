@@ -72,7 +72,7 @@ class Path2(Path):
         return self
 
 
-def pathify(path: "PathLike", *args, **kwargs) -> Path2:
+def pathify(path: Union[str, Path, PathLike], *args, **kwargs) -> Path2:
     """Ensure that path object will end-up as ``Path2``, if it hasn't been so."""
     return path if isinstance(path, Path2) else Path2(path, *args, **kwargs)
 
