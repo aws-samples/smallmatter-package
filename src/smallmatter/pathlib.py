@@ -1,4 +1,17 @@
-"""This module provides ambidextrous path classes that deal with local vs S3 paths."""
+"""This module provides ambidextrous path classes that deal with local vs S3 paths.
+
+Any operation to S3 is done via s3fs, hence this module shares the same scope and limitations as s3fs.
+
+This project is meant for convenience, rather than feature completeness. Users are assume to be fully aware that only a
+subset of filesystem operations are supported on S3.
+
+This module aims to support only the most frequent pattern, i.e., read/write from a single file. By design, it
+deliberately makes no attempt to emulate unsupported operations or to provide a unified abstraction on local-and-s3
+filesystem. In fact, exceptions should be expected on some operations.
+
+20200512:
+- Placeholders for file operations, subject to s3fs's support.
+"""
 
 from os import PathLike
 from pathlib import Path, _PathParents, _PosixFlavour
@@ -30,7 +43,7 @@ class _S3Flavour(_PosixFlavour):
         Internally, will use relative representation, but make sure is_absolute() always returns True.
         """
         _, _, parsed = super().parse_parts(parts)
-        if parsed[0] == "/":
+        if len(parsed) > 0 and parsed[0] == "/":
             parsed = parsed[1:]
         return "", "", parsed
 
@@ -68,7 +81,7 @@ class Path2(Path):
         if self._flavour == _s3_flavour:
             if not fs:
                 raise ValueError("S3FileSystem not defined")
-            self._fs = fs
+            self._accessor = fs  # NOTE: deviate from pathlib, where isinstance(fs, Accessor) is False.
 
         return self
 
@@ -84,22 +97,9 @@ class S3Path(Path2):
     _flavour = _s3_flavour
     __slots__ = ()
 
-    # @classmethod
-    # def _from_parsed_parts(cls, drv, root, parts, init=True):
-    #     return super()._from_parsed_parts(drv, root, parts, init)
-
-    def _init(self):
-        # Override PurePath._init().
-        #
-        # Called by _from_parts() and _from_parsed_parts() to initialize a new
-        # instance of S3Path.
-        pass
-        # FIXME: propagate _fs
-
-    # Override
     def _make_child(self, args):
         new_path = super()._make_child(args)
-        new_path._fs = self._fs
+        new_path._accessor = self._accessor
         return new_path
 
     def is_absolute(self):
@@ -111,13 +111,71 @@ class S3Path(Path2):
 
         args & kwargs: for S3FileSystem.open()
         """
-        return self._fs.open(self.__str__(), *args, **kwargs)
+        # Maintain consistent behavior with pathlib.Path
+        if self._closed:
+            self._raise_closed()
+
+        return self._accessor.open(self.__str__(), *args, **kwargs)
+
+    def chmod(self, *args, **kwargs):
+        # Maintain consistent behavior with pathlib.Path
+        if self._closed:
+            self._raise_closed()
+        raise NotImplementedError()
+
+    def mkdir(self, *args, **kwargs):
+        # Maintain consistent behavior with pathlib.Path
+        if self._closed:
+            self._raise_closed()
+        raise NotImplementedError()
+
+    def read_bytes(self, *args, **kwargs):
+        """Read bytes from file."""
+        raise NotImplementedError()
+
+    def read_text(self, *args, **kwargs):
+        """Read strings from file."""
+        raise NotImplementedError()
+
+    def touch(self, *args, **kwargs):
+        """Create a 0-byte file."""
+        raise NotImplementedError()
+
+    def unlink(self, *args, **kwargs):
+        """Remove this file."""
+        # Maintain consistent behavior with pathlib.Path
+        if self._closed:
+            self._raise_closed()
+        raise NotImplementedError()
+
+    def rmdir(self, *args, **kwargs):
+        """Remove this directory (should it be empty? Check s3fs/core.py)."""
+        # Maintain consistent behavior with pathlib.Path
+        if self._closed:
+            self._raise_closed()
+        raise NotImplementedError()
+
+    def exists(self, *args, **kwargs):
+        """Check whether this path exists."""
+        raise NotImplementedError()
+
+    def write_bytes(self, *args, **kwargs):
+        """Write bytes to file."""
+        raise NotImplementedError()
+
+    def write_text(self, *args, **kwargs):
+        """Write strings to file."""
+        raise NotImplementedError()
 
     def iterdir(self):
         """Iterate over the files in this directory.
 
         Does not yield any result for the special paths '.' and '..'.
         """
+        # Maintain consistent behavior with pathlib.Path
+        if self._closed:
+            self._raise_closed()
+
         raise NotImplementedError()
 
     def glob(self, pattern):
@@ -145,21 +203,21 @@ class S3Path(Path2):
     @property
     def parent(self):
         # super() ends-up returning self or PurePath._from_parsed_parts(), where
-        # both does not have _fs information. Hence, propagate _fs here.
+        # both does not have _accessor information. Hence, propagate _accessor here.
         new_path = super().parent
-        new_path._fs = self._fs
+        new_path._accessor = self._accessor
         return new_path
 
     @property
     def parents(self):
         """Return a sequence of this path's logical parents."""
-        return _S3PathParents(self, self._fs)
+        return _S3PathParents(self, self._accessor)
 
 
 class _S3PathParents(_PathParents):
     def __init__(self, path, fs):
         super().__init__(path)
-        self._fs = fs
+        self._accessor = fs
 
     def __len__(self):
         return len(self._parts)
@@ -170,5 +228,5 @@ class _S3PathParents(_PathParents):
         if idx < 0 or idx >= len(self) - 1:
             raise IndexError(idx)
         parent = super().__getitem__(idx)
-        parent._fs = self._fs
+        parent._accessor = self._accessor
         return parent
