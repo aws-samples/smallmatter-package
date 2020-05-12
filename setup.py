@@ -23,8 +23,7 @@ required_packages: List[str] = []
 # Specific use case dependencies
 # fmt: off
 extras = {
-    "all": ["s3fs"],
-    "pathlib": ["s3fs"],
+    "all": ["s3fs", "pandas", "matplotlib"],
 }
 # fmt: on
 
