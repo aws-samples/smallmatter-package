@@ -19,18 +19,21 @@ warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 DD_T = Dict[str, Any]
 
 
-class DdLoader(object):
-    """Helper class to execute valid Python codes and get all the newly created symbols."""
+class PyExec(object):
+    """Helper class to execute valid Python codes and get all the newly created symbols.
+
+    Typical use-case: to implement a data dictionary that can mix-in Python code to construct certain variables.
+    """
 
     @staticmethod
     def from_file(path: Union[str, Path, os.PathLike], valid_symbols: Iterable[str] = []) -> DD_T:
-        """Load a data dictionary from Python file."""
+        """Execute the Python file and export the symbols as a dictionary."""
         with pathify(path).open("r") as f:
-            return DdLoader.from_str(f.read(), valid_symbols)
+            return PyExec.from_str(f.read(), valid_symbols)
 
     @staticmethod
     def from_str(s, valid_symbols: Iterable[str] = []) -> DD_T:
-        """Load a data dictionary from a string representing valid Python codes."""
+        """Execute the Python codes and export the symbols as a dictionary."""
         dd_raw: DD_T = {}
         exec(s, dd_raw)
         dd = {k: dd_raw[k] for k in dd_raw}
