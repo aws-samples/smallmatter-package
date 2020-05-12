@@ -16,7 +16,6 @@ from .pathlib import pathify
 # See: https://github.com/pandas-dev/pandas/pull/32444
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
-
 DD_T = Dict[str, Any]
 
 
@@ -224,7 +223,7 @@ class SimpleMatrixPlotter(object):
 # per figure dimension). The following benchmark to render 10 montages at 100 subplots/montage tops at 392MB RSS, when
 # measured on MBP early 2015 model, Mojave 10.14.6, python-3.7.6.
 #
-# from mlmax.visualization.visualize import MontagePager
+# from smallmatter.ds import MontagePager
 # import pandas as pd
 # mp = MontagePager()
 # ser = pd.Series([0,1,2,1,3,2], name='haha')

@@ -2,6 +2,7 @@
 
 from os import PathLike
 from pathlib import Path, _PathParents, _PosixFlavour
+from typing import Union
 from urllib.parse import quote_from_bytes as urlquote_from_bytes
 
 import s3fs
