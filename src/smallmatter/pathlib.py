@@ -1,7 +1,7 @@
 """This module provides ambidextrous path classes that deal with local vs S3 paths."""
 
 from os import PathLike
-from pathlib import Path, _PosixFlavour  # type: ignore
+from pathlib import Path, _PathParents, _PosixFlavour
 from urllib.parse import quote_from_bytes as urlquote_from_bytes
 
 import s3fs
@@ -24,16 +24,19 @@ class _S3Flavour(_PosixFlavour):
     is_supported = True
 
     def parse_parts(self, parts):
-        """Make sure to parts are absolute."""
-        drv, root, parsed = super().parse_parts(parts)
-        if parsed[0] != "/":
-            parsed.insert(0, "/")
-        return drv, "s3://", parsed
+        """Make sure to parts do not start with '/'.
+
+        Internally, will use relative representation, but make sure is_absolute() always returns True.
+        """
+        _, _, parsed = super().parse_parts(parts)
+        if parsed[0] == "/":
+            parsed = parsed[1:]
+        return "", "", parsed
 
     def make_uri(self, path: "S3Path"):
         path_noschema: str = str(path)[len("s3://") :]  # Need to chop-off s3://
         bpath: bytes = path_noschema.encode("utf-8")
-        return path._root + urlquote_from_bytes(bpath)  # type: ignore
+        return "s3://" + urlquote_from_bytes(bpath)  # type: ignore
 
 
 _s3_flavour = _S3Flavour()
@@ -80,6 +83,10 @@ class S3Path(Path2):
     _flavour = _s3_flavour
     __slots__ = ()
 
+    # @classmethod
+    # def _from_parsed_parts(cls, drv, root, parts, init=True):
+    #     return super()._from_parsed_parts(drv, root, parts, init)
+
     def _init(self):
         # Override PurePath._init().
         #
@@ -87,6 +94,16 @@ class S3Path(Path2):
         # instance of S3Path.
         pass
         # FIXME: propagate _fs
+
+    # Override
+    def _make_child(self, args):
+        new_path = super()._make_child(args)
+        new_path._fs = self._fs
+        return new_path
+
+    def is_absolute(self):
+        """Return True always."""
+        return True
 
     def open(self, *args, **kwargs):
         """[summary].
@@ -114,23 +131,43 @@ class S3Path(Path2):
         try:
             return self._str
         except AttributeError:
-            self._str = super()._format_parsed_parts("", self._root, self._parts) or "."
+            self._str = "s3://" + super()._format_parsed_parts("", "", self._parts) or "."
             return self._str
 
-    # Override a few pathlib's, to propagate _fs to the new S3Path constructed from me.
-    # FIXME: all tehse should be handled inside _init?? OTherwise there's simply too many to override :(
-    def __truediv__(self, key):
-        new_path = super().__truediv__(key)
-        new_path._fs = self._fs
-        return new_path
-
     def __rtruediv__(self, key):
-        new_path = super().__rtruediv__(key)
+        # super() ends-up calling PurePath._parse_args() which works directly on
+        # parts: List[str], hence we must chop-off the s3:// for correct result.
+        if not isinstance(key, Path) and key.startswith("s3://"):
+            key = key[len("s3://") :]
+        return super().__rtruediv__(key)
+
+    @property
+    def parent(self):
+        # super() ends-up returning self or PurePath._from_parsed_parts(), where
+        # both does not have _fs information. Hence, propagate _fs here.
+        new_path = super().parent
         new_path._fs = self._fs
         return new_path
 
     @property
-    def parent(self):
-        new_path = super().parent
-        new_path._fs = self._fs
-        return new_path
+    def parents(self):
+        """Return a sequence of this path's logical parents."""
+        return _S3PathParents(self, self._fs)
+
+
+class _S3PathParents(_PathParents):
+    def __init__(self, path, fs):
+        super().__init__(path)
+        self._fs = fs
+
+    def __len__(self):
+        return len(self._parts)
+
+    def __getitem__(self, idx):
+        # Unlike the super() version, we don't want to return the parent of the
+        # first path, which is 's3://' because s3 object ops always need bucket.
+        if idx < 0 or idx >= len(self) - 1:
+            raise IndexError(idx)
+        parent = super().__getitem__(idx)
+        parent._fs = self._fs
+        return parent
