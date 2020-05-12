@@ -24,6 +24,7 @@ required_packages: List[str] = []
 # fmt: off
 extras = {
     "all": ["s3fs", "pandas", "matplotlib"],
+    "sm": ["sagemaker"]
 }
 # fmt: on
 
@@ -43,7 +44,7 @@ setup(
         "Source Code": f"https://github.com/verdimrc/{_pkg}/",
     },
     license="MIT",
-    keywords="data science AWS",
+    keywords="data science AWS Amazon SageMaker S3 pandas matplotlib",
     platforms=["any"],
     classifiers=[
         "Development Status :: 3 - Alpha",
