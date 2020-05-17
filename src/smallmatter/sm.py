@@ -1,13 +1,13 @@
-import os
 from pathlib import Path
 
 # https://github.com/aws/sagemaker-python-sdk/blob/d8b3012c23fbccdcd1fda977ed9efa4507386a49/src/sagemaker/session.py#L45
-NOTEBOOK_METADATA_FILE="/opt/ml/metadata/resource-metadata.json"
+NOTEBOOK_METADATA_FILE = "/opt/ml/metadata/resource-metadata.json"
+
 
 def get_sm_execution_role() -> str:
     if Path(NOTEBOOK_METADATA_FILE).is_file():
         # Likely on SageMaker notebook instance.
-        import sagemaker
+        import sagemaker  # noqa
 
         return sagemaker.get_execution_role()
     else:
@@ -28,6 +28,20 @@ def get_sm_execution_role() -> str:
             if role["RoleName"].startswith("AmazonSageMaker-ExecutionRole-"):
                 # print('Resolved SageMaker IAM Role to: ' + str(role))
                 return role["Arn"]
-        raise Exception(
-            "Could not resolve what should be the SageMaker role to be used"
-        )
+        raise Exception("Could not resolve what should be the SageMaker role to be used")
+
+
+class PyTestHelpers:
+    @staticmethod
+    def import_from_file(name, fname):
+        """Import a module given a specific file name.
+
+        This is intended to run pytest tests on multiple SageMaker sourcedirs under a single git repo. For further
+        example, see https://github.com/verdimrc/python-project-skeleton/blob/master/test/test_smep.py
+        """
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(name, fname)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
