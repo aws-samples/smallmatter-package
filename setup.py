@@ -30,7 +30,8 @@ extras = {
 
 setup(
     name=_pkg,
-    packages=find_packages(),
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     version=read_version(),
     description="Collection of fine-grained utilities for data science works on AWS.",
     long_description=read("README.md"),
