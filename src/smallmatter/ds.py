@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple, Union
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 from .pathlib import pathify
 
