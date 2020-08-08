@@ -299,9 +299,9 @@ class MontagePager(object):
         im.save(self.montage_path / f"{self.prefix}-{self._i:04d}.png")
         self._save_pieces(im, subplot_cnt)
 
-    def _save_pieces(self, im: PIL.Image.Image, subplot_cnt: int, debug: bool = False):
+    def _save_pieces(self, im: PIL.Image.Image, subplot_cnt: int, debug: bool = True):
         """Chop to pieces and save, row-wise."""
-        true_nrows = subplot_cnt // self.smp.nrows
+        true_nrows = (subplot_cnt // self.smp.nrows) + 1
         true_ncols = min(self.smp.ncols, subplot_cnt)
         subplot_h = im.height // true_nrows
         subplot_w = im.width // true_ncols
