@@ -2,12 +2,14 @@
 import math
 import os
 import warnings
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple, Union
 
 import matplotlib
 import numpy as np
 import pandas as pd
+import PIL.Image
 from matplotlib import pyplot as plt
 
 from .pathlib import pathify
@@ -258,6 +260,8 @@ class MontagePager(object):
             kwargs: Keyword arguments to instantiate each montage (i.e., SimpleMatrixPlotter.__init__()).
         """
         self.path = path
+        self.montage_path = path / "montages"
+        self.individual_path = path / "individuals"
         self.prefix = prefix
         self.page_size = page_size
         self.smp_kwargs = kwargs
@@ -281,8 +285,38 @@ class MontagePager(object):
 
     def savefig(self):
         """Save the current montage to a file."""
-        # No need to check for empty montage, because Figure.savefig() won't generate output file in such cases.
-        self.smp.savefig(self.path / f"{self.prefix}-{self._i:04d}.png", **self.savefig_kwargs)
+        if self.smp.i < 1:
+            return
+
+        with BytesIO() as buf:
+            # Get the image buffer of the bbox-transformed canvas -- print_figure() in matplotlib/backend_bases.py.
+            subplot_cnt = self.smp.i
+            self.smp.savefig(buf, format="png", **self.savefig_kwargs)
+            buf.seek(0)
+            im = PIL.Image.open(buf)
+            im.load()
+
+        im.save(self.montage_path / f"{self.prefix}-{self._i:04d}.png")
+        self._save_pieces(im, subplot_cnt)
+
+    def _save_pieces(self, im: PIL.Image.Image, subplot_cnt: int, debug: bool = False):
+        """Chop to pieces and save, row-wise."""
+        true_nrows = subplot_cnt // self.smp.nrows
+        true_ncols = min(self.smp.ncols, subplot_cnt)
+        subplot_h = im.height // true_nrows
+        subplot_w = im.width // true_ncols
+        if debug:
+            print(f"{im.height=} {im.width=} {subplot_cnt=} {true_nrows=} {true_ncols=} {subplot_h=} {subplot_w=}")
+
+        for i in range(subplot_cnt):
+            row, col = (i // self.smp.nrows), (i % self.smp.ncols)
+            up = row * subplot_h
+            left = col * subplot_w
+            right = left + subplot_w
+            bottom = up + subplot_h
+            if debug:
+                print(f"{i=} {row=} {col=} {left=} {up=} {right=} {bottom=}")
+            im.crop((left, up, right, bottom)).save(self.individual_path / f"haha-{i:02d}.png")
 
 
 def plot_binpat(
