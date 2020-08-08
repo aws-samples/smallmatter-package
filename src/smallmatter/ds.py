@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterable, Optional, Tuple, Union
 import matplotlib
 import numpy as np
 import pandas as pd
-import PIL.Image
+from PIL import Image, ImageChops
 from matplotlib import pyplot as plt
 
 from .pathlib import pathify
@@ -285,38 +285,72 @@ class MontagePager(object):
 
     def savefig(self):
         """Save the current montage to a file."""
-        if self.smp.i < 1:
+        # These must be done before smp.savefig() which destroys the underlying figure.
+        subplot_cnt = self.smp.i
+        bg_rgb = tuple((int(255 * channel) for channel in self.smp.fig.get_facecolor()[:3]))
+        if subplot_cnt < 1:
             return
 
         with BytesIO() as buf:
             # Get the image buffer of the bbox-transformed canvas -- print_figure() in matplotlib/backend_bases.py.
-            subplot_cnt = self.smp.i
+            #
+            # NOTE: methods described in https://stackoverflow.com/questions/4325733/save-a-subplot-in-matplotlib) was
+            # tested and found not robust. The best outcome was using `exent = ax.get_tightbbox(...)`, which was still
+            # not good enought as the next-row title still creeps into individual subplot image (tested with matplotlib
+            # 3.2.1 and 3.3.0).
             self.smp.savefig(buf, format="png", **self.savefig_kwargs)
             buf.seek(0)
-            im = PIL.Image.open(buf)
+            im = Image.open(buf)
             im.load()
 
         im.save(self.montage_path / f"{self.prefix}-{self._i:04d}.png")
-        self._save_pieces(im, subplot_cnt)
+        self._save_pieces(im, subplot_cnt, bg_rgb)
 
-    def _save_pieces(self, im: PIL.Image.Image, subplot_cnt: int, debug: bool = True):
+    def _save_pieces(
+        self,
+        im: Image.Image,
+        subplot_cnt: int,
+        bg_rgb: Tuple[float, float, float] = (255, 255, 255),
+        debug: bool = False,
+    ):
         """Chop to pieces and save, row-wise."""
-        true_nrows = (subplot_cnt // self.smp.nrows) + 1
-        true_ncols = min(self.smp.ncols, subplot_cnt)
-        subplot_h = im.height // true_nrows
-        subplot_w = im.width // true_ncols
-        if debug:
-            print(f"{im.height=} {im.width=} {subplot_cnt=} {true_nrows=} {true_ncols=} {subplot_h=} {subplot_w=}")
 
-        for i in range(subplot_cnt):
+        def subplot_size():
+            true_nrows = (subplot_cnt // self.smp.nrows) + 1
+            true_ncols = min(self.smp.ncols, subplot_cnt)
+            h = im.height // true_nrows
+            w = im.width // true_ncols
+            if debug:
+                print(f"{im.height=} {im.width=} {subplot_cnt=} {true_nrows=} {true_ncols=} {h=} {w=}")
+            return h, w
+
+        def fixed_bbox(i):
+            """To crop by fix size, but may produce excess border & plot not centered."""
             row, col = (i // self.smp.nrows), (i % self.smp.ncols)
             up = row * subplot_h
             left = col * subplot_w
             right = left + subplot_w
             bottom = up + subplot_h
             if debug:
-                print(f"{i=} {row=} {col=} {left=} {up=} {right=} {bottom=}")
-            im.crop((left, up, right, bottom)).save(self.individual_path / f"haha-{i:02d}.png")
+                print(f"fixed_bbox: {i=} {row=} {col=} {left=} {up=} {right=} {bottom=}")
+            return left, up, right, bottom
+
+        def tighten(im):
+            if self.savefig_kwargs.get("transparent", False):
+                # For transparent background, getbbox() works out-of-the-box.
+                cropped = im.crop(im.getbbox())
+            else:
+                # For non-transparent background, need to crop in RGB space.
+                bg = Image.new("RGB", im.size, bg_rgb)
+                diff = ImageChops.difference(im.convert("RGB"), bg)
+                cropped = im.crop(diff.getbbox())
+            return cropped
+
+        subplot_h, subplot_w = subplot_size()
+        for i in range(subplot_cnt):
+            cropped_fixed = im.crop(fixed_bbox(i))
+            cropped_tight = tighten(cropped_fixed)
+            cropped_tight.save(self.individual_path / f"haha-{i:02d}.png")
 
 
 def plot_binpat(

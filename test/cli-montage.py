@@ -7,7 +7,7 @@ from numpy.random import rand
 from smallmatter.ds import MontagePager
 
 plt.ioff()
-mp = MontagePager(path=Path("output"))
+mp = MontagePager(path=Path("output"), savefig_kwargs=dict(transparent=False))
 for i in range(12):
     pd.DataFrame({"x": range(6), "y": rand(6)}).plot(ax=mp.pop(), x="x", y="y", title=f"chart\n{i:04d}")
 mp.savefig()
