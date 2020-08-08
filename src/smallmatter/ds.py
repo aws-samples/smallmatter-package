@@ -229,9 +229,8 @@ class SimpleMatrixPlotter(object):
 # from smallmatter.ds import MontagePager
 # import pandas as pd
 # mp = MontagePager()
-# ser = pd.Series([0,1,2,1,3,2], name='haha')
 # for i in range(1000):
-#     ser.plot(ax=mp.pop())
+#     pd.Series(rand(6)).plot(ax=mp.pop(), title=f"chart-{i:04d}")
 # mp.savefig()
 class MontagePager(object):
     """A pager to group and save subplots into multiple montage image files."""
