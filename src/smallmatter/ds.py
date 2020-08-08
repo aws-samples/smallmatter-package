@@ -204,13 +204,16 @@ class SimpleMatrixPlotter(object):
         self.axes = self.axes[: self._i]
 
     def savefig(self, *args, **kwargs):
-        """Save plotted subplots, then destroy the underlying figure.
-
-        Subsequent operations are undefined and may raise errors.
-        """
+        """Save plotted subplots."""
         self.trim()
         kwargs["bbox_inches"] = "tight"
         self.fig.savefig(*args, **kwargs)
+
+    def clear(self):
+        """Destroy the underlying figure.
+
+        Subsequent operations are undefined and may raise errors.
+        """
         # Whatever possible ways to release figure
         self.fig.clf()
         plt.close(self.fig)
@@ -258,6 +261,8 @@ class MontagePager(object):
             kwargs: Keyword arguments to instantiate each montage (i.e., SimpleMatrixPlotter.__init__()).
         """
         self.path = path
+        self.montage_path = path / "montages"
+        self.individual_path = path / "individuals"
         self.prefix = prefix
         self.page_size = page_size
         self.smp_kwargs = kwargs
@@ -281,8 +286,23 @@ class MontagePager(object):
 
     def savefig(self):
         """Save the current montage to a file."""
-        # No need to check for empty montage, because Figure.savefig() won't generate output file in such cases.
-        self.smp.savefig(self.path / f"{self.prefix}-{self._i:04d}.png", **self.savefig_kwargs)
+        subplot_cnt = self.smp.i
+        if subplot_cnt < 1:
+            return
+        self.smp.savefig(self.montage_path / f"{self.prefix}-{self._i:04d}.png", **self.savefig_kwargs)
+
+        import warnings
+        warnings.warn("Buggy: individual image includes title from the next row.")
+        for i in range(subplot_cnt):
+            ax = self.smp.axes[i]
+            extent = (
+                ax.get_tightbbox(self.smp.fig.canvas.renderer)
+                .transformed(self.smp.fig.dpi_scale_trans.inverted())
+                .expanded(1.025, 1.025)
+            )
+            self.smp.fig.savefig(self.individual_path / f"haha-{i:02d}.png", bbox_inches=extent)
+
+        self.smp.clear()
 
 
 def plot_binpat(
