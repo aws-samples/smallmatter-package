@@ -288,6 +288,7 @@ class MontagePager(object):
         # These must be done before smp.savefig() which destroys the underlying figure.
         subplot_cnt = self.smp.i
         bg_rgb = tuple((int(255 * channel) for channel in self.smp.fig.get_facecolor()[:3]))
+
         if subplot_cnt < 1:
             return
 
@@ -324,6 +325,8 @@ class MontagePager(object):
                 print(f"{im.height=} {im.width=} {subplot_cnt=} {true_nrows=} {true_ncols=} {h=} {w=}")
             return h, w
 
+        subplot_h, subplot_w = subplot_size()
+
         def fixed_bbox(i):
             """To crop by fix size, but may produce excess border & plot not centered."""
             row, col = (i // self.smp.nrows), (i % self.smp.ncols)
@@ -337,13 +340,12 @@ class MontagePager(object):
 
         def tighten(im):
             if self.savefig_kwargs.get("transparent", False):
-                # For transparent background, getbbox() works out-of-the-box.
-                cropped = im.crop(im.getbbox())
+                bbox = im.getbbox()
             else:
-                # For non-transparent background, need to crop in RGB space.
                 bg = Image.new("RGB", im.size, bg_rgb)
                 diff = ImageChops.difference(im.convert("RGB"), bg)
-                cropped = im.crop(diff.getbbox())
+                bbox = diff.getbbox()
+            cropped = im.crop(bbox)
             return cropped
 
         subplot_h, subplot_w = subplot_size()
