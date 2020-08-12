@@ -9,8 +9,8 @@ from typing import Any, Dict, Iterable, Optional, Tuple, Union
 import matplotlib
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageChops
 from matplotlib import pyplot as plt
+from PIL import Image, ImageChops
 
 from .pathlib import pathify
 
@@ -275,6 +275,10 @@ class MontagePager(object):
         """:int: Sequence number of the current montage (zero-based)."""
         return self._i
 
+    @property
+    def filename(self):
+        return f"{self.prefix}-{self._i:04d}.png"
+
     def pop(self, **kwargs):
         """Return the next axes."""
         if self.smp.i >= self.page_size:
@@ -317,12 +321,16 @@ class MontagePager(object):
         """Chop to pieces and save, row-wise."""
 
         def subplot_size():
-            true_nrows = (subplot_cnt // self.smp.nrows) + 1
+            true_nrows = (subplot_cnt // self.smp.nrows) + ((subplot_cnt % self.smp.ncols) != 0)
             true_ncols = min(self.smp.ncols, subplot_cnt)
             h = im.height // true_nrows
             w = im.width // true_ncols
             if debug:
-                print(f"{im.height=} {im.width=} {subplot_cnt=} {true_nrows=} {true_ncols=} {h=} {w=}")
+                #    print(f"{im.height=} {im.width=} {subplot_cnt=} {true_nrows=} {true_ncols=} {h=} {w=}")
+                print(
+                    f"im.height={im.height} im.width={im.width} im.subplot_cnt={subplot_cnt}"
+                    f"true_nrows={true_nrows} true_ncols={true_ncols} h={h} w={w}"
+                )
             return h, w
 
         subplot_h, subplot_w = subplot_size()
@@ -335,7 +343,8 @@ class MontagePager(object):
             right = left + subplot_w
             bottom = up + subplot_h
             if debug:
-                print(f"fixed_bbox: {i=} {row=} {col=} {left=} {up=} {right=} {bottom=}")
+                #    print(f"fixed_bbox: {i=} {row=} {col=} {left=} {up=} {right=} {bottom=}")
+                print(f"fixed_bbox: i={i} row={row} col={col} left={left} up={up} right={right} bottom={bottom}")
             return left, up, right, bottom
 
         def tighten(im):
@@ -345,14 +354,23 @@ class MontagePager(object):
                 bg = Image.new("RGB", im.size, bg_rgb)
                 diff = ImageChops.difference(im.convert("RGB"), bg)
                 bbox = diff.getbbox()
-            cropped = im.crop(bbox)
+
+            # Tight crop, but with small pads for a more pleasant view
+            cropped = im.crop(pad(*bbox))
             return cropped
+
+        def pad(left: float, up: float, right: float, bottom: float, pixels=4) -> Tuple[float, float, float, float]:
+            left = min(left - pixels, 0)
+            up = min(up - pixels, 0)
+            right = min(right + pixels, im.width)
+            bottom = min(bottom + pixels, im.height)
+            return (left, up, right, bottom)
 
         subplot_h, subplot_w = subplot_size()
         for i in range(subplot_cnt):
             cropped_fixed = im.crop(fixed_bbox(i))
             cropped_tight = tighten(cropped_fixed)
-            cropped_tight.save(self.individual_path / f"haha-{i:02d}.png")
+            cropped_tight.save(self.individual_path / f"{self._i:04d}-{i:02d}.png")
 
 
 def plot_binpat(
