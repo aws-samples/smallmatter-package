@@ -336,7 +336,7 @@ class MontagePager(object):
         mtg_fname = self.filename
         for i, itemid in enumerate(self.itemid):
             row, col = divmod(i, self.smp.ncols)
-            s = str(itemid).encode("unicode-escape")
+            s = str(itemid).encode("unicode-escape").decode("utf-8")
             self.csvwriter.writerow((f"{mtg_i:04d}-{i:02d}.png", s, mtg_fname, i, row, col))
         self.itemid.clear()
 
