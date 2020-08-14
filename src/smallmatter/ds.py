@@ -233,7 +233,8 @@ class SimpleMatrixPlotter(object):
 # import pandas as pd
 # mp = MontagePager()
 # for i in range(1000):
-#     pd.Series(rand(6)).plot(ax=mp.pop(), title=f"chart-{i:04d}")
+#     title = f"chart-{i:04d}"
+#     pd.Series(rand(6)).plot(ax=mp.pop(title), title=title)
 # mp.savefig()
 class MontagePager(object):
     """A pager to group and save subplots into multiple montage image files."""
@@ -248,10 +249,21 @@ class MontagePager(object):
     ):
         """Render plots to one or more montages.
 
-        Each montage has at most ``page_size`` subplots. This pager automatically saves an existing montage when the
-        montage is full and an attempt was made to add a new subplot to it. After the exsting montage is saved, a new
-        blank montage is created, and the new subplot will be added to it. Callers are expected to explicitly save the
-        last montage.
+        Each montage has at most ``page_size`` subplots. This pager automatically saves an existing montage on overflow,
+        which occurs when the montage is full and an attempt was made to add a new subplot to it. After the existing
+        montage is saved, a new blank montage is created, and the new subplot will be added to it. Callers are expected
+        to explicitly save the last montage.
+
+        >>> import pandas as pd
+        >>>
+        >>> mp = MontagePlotter('output', savefig_kwargs=dict(transparent=TrueFalse))
+        >>> for i in range(128):
+        >>>     title = f"chart-{i:04d}"
+        >>>     pd.Series(rand(6)).plot(ax=mp.pop(title), title=title)
+        >>> mp.savefig()  # Save the last montage which may be partially filled.
+
+        >>> mp = MontagePlotter('output', savefig_kwargs=dict(transparent=True))
+        >>> ...
 
         Args:
             prefix (str, optional): Prefix of output filenames. Defaults to "montage".
