@@ -1,10 +1,11 @@
 """Core data-science utilities."""
+import csv
 import math
 import os
 import warnings
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 import matplotlib
 import numpy as np
@@ -269,6 +270,9 @@ class MontagePager(object):
         self.savefig_kwargs = savefig_kwargs
         self.smp = SimpleMatrixPlotter(**self.smp_kwargs)
         self._i = 0
+        self.itemid: List[Any] = []
+        self.csvwriter = csv.writer((path / "mappings.csv").open("w"))
+        self.csvwriter.writerow(["individual", "title", "montage", "subplot", "row", "col"])
 
     @property
     def i(self):
@@ -279,12 +283,13 @@ class MontagePager(object):
     def filename(self):
         return f"{self.prefix}-{self._i:04d}.png"
 
-    def pop(self, **kwargs):
-        """Return the next axes."""
+    def pop(self, subplot_id: Any = "", **kwargs):
+        """Return the next axes, and associate the returned axes with `subplot_id`."""
         if self.smp.i >= self.page_size:
             self.savefig()
             self.smp = SimpleMatrixPlotter(**self.smp_kwargs)
             self._i += 1
+        self.itemid.append(subplot_id)
         return self.smp.pop()
 
     def savefig(self):
@@ -310,6 +315,18 @@ class MontagePager(object):
 
         im.save(self.montage_path / f"{self.prefix}-{self._i:04d}.png")
         self._save_pieces(im, subplot_cnt, bg_rgb)
+        self._save_csv()
+
+    def _save_csv(self):
+        """Write row ["individual", "title", "montage-fname", "subplot-idx", "row", "col"]."""
+        ncols = self.smp.ncols
+        mtg_i = self._i
+        mtg_fname = self.filename
+        for i, itemid in enumerate(self.itemid):
+            row, col = divmod(i, self.smp.ncols)
+            s = str(itemid).encode("unicode-escape")
+            self.csvwriter.writerow((f"{mtg_i:04d}-{i:02d}.png", s, mtg_fname, i, row, col))
+        self.itemid.clear()
 
     def _save_pieces(
         self,
