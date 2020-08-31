@@ -14,7 +14,7 @@ filesystem. In fact, exceptions should be expected on some operations.
 """
 
 from os import PathLike
-from pathlib import Path, _PathParents, _PosixFlavour
+from pathlib import Path, _PathParents, _PosixFlavour  # type: ignore
 from typing import Union
 from urllib.parse import quote_from_bytes as urlquote_from_bytes
 
