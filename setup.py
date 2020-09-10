@@ -7,6 +7,7 @@ from setuptools import find_packages, setup
 import versioneer
 
 _pkg: str = "smallmatter"
+_ghrepo: str = f"{_pkg}-package"
 
 
 def read(fname):
@@ -18,12 +19,10 @@ def read(fname):
 required_packages: List[str] = []
 
 # Specific use case dependencies
-# fmt: off
 extras = {
     "all": ["s3fs", "pandas", "matplotlib"],
-    "sm": ["sagemaker"]
+    "sm": ["sagemaker"],
 }
-# fmt: on
 
 setup(
     name=_pkg,
@@ -35,12 +34,11 @@ setup(
     long_description=read("README.md"),
     author="Verdi March",
     author_email="first.last@email.com",
-    url=f"https://github.com/abcd/{_pkg}/",
+    url=f"https://github.com/aws-samples/{_ghrepo}/",
     download_url="",
     project_urls={
-        "Bug Tracker": f"https://github.com/verdimrc/{_pkg}/issues/",
-        "Documentation": f"https://{_pkg}.readthedocs.io/en/stable/",
-        "Source Code": f"https://github.com/verdimrc/{_pkg}/",
+        "Bug Tracker": f"https://github.com/aws-samples/{_ghrepo}/issues/",
+        "Source Code": f"https://github.com/aws-samples/{_ghrepo}/",
     },
     license="MIT",
     keywords="data science AWS Amazon SageMaker S3 pandas matplotlib",
