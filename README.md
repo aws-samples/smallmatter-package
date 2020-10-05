@@ -8,8 +8,6 @@ implementation, by simplifying repetitive tasks such as checking data types
 (i.e., data quality), procedural subplots, consistent interface to local
 filesystem and Amazon S3, etc.
 
-- `smallmatter.ds`: for rapid prototyping of some data science tasks.
-
 Capabilities (non-exhaustive list):
 
 - `smallmatter.pathlib.Path2`: `pathlib`-compatible interface to abstract
