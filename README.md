@@ -3,6 +3,13 @@
 Wrappers to streamline data-science tasks using Python toolkits (such as pandas,
 matplotlib, etc.).
 
+The intent is to improve the ergonomics of data science exploration and
+implementation, by simplifying repetitive tasks such as checking data types
+(i.e., data quality), procedural subplots, consistent interface to local
+filesystem and Amazon S3, etc.
+
+- `smallmatter.ds`: for rapid prototyping of some data science tasks.
+
 Capabilities (non-exhaustive list):
 
 - `smallmatter.pathlib.Path2`: `pathlib`-compatible interface to abstract
@@ -10,6 +17,12 @@ certain single-file operations on local filesystem and Amazon S3.
 
 - `smallmatter.pathlib.S3Path`: `pathlib`-compatible interface to abstract
 certain single-file operations on Amazon S3.
+
+- `smallmatter.typecheck`: check possible dtypes of a csv file.
+  * For each column, list the auto-detected dtypes. Useful to check data
+    for data qualities (e.g., mixed-in string and numbers in the same column).
+  * Generate html reports of the auto-detected dtypes.
+  * CLI interface to generate those html reports.
 
 - `smallmatter.sm`: utilities for Amazon SageMaker
   * `get_sm_execution_role()`: an opinionated function to unify fetching the
