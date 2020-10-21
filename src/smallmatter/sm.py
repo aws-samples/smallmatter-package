@@ -1,4 +1,7 @@
 from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
+
+from .pathlib import S3Path
 
 # https://github.com/aws/sagemaker-python-sdk/blob/d8b3012c23fbccdcd1fda977ed9efa4507386a49/src/sagemaker/session.py#L45
 NOTEBOOK_METADATA_FILE = "/opt/ml/metadata/resource-metadata.json"
@@ -45,3 +48,59 @@ class PyTestHelpers:
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         return mod
+
+
+def get_model_and_output_tgz(train_job_name: str, sm: Optional[Any] = None) -> Tuple[S3Path, S3Path]:
+    """[summary]
+
+    Args:
+        train_job_name (str): [description]
+        sm (Optional[Any], optional): [description]. Defaults to None.
+
+    Returns:
+        Tuple[S3Path, S3Path]: (model.tar.gz, output.tar.gz).
+    """
+    model_tgz = get_model_tgz(train_job_name, sm)
+    return (model_tgz, model_tgz.parent / "output.tar.gz")
+
+
+def get_output_tgz(train_job_name: str, sm: Optional[Any] = None) -> S3Path:
+    """Get the S3 path of the output.tar.gz produced by a completed train job.
+
+    Args:
+        train_job_name (str): Name of training job.
+        sm (optional): boto3.client for sagemaker. Defaults to None.
+
+    Returns:
+        S3Path: S3 path to the output.tar.gz
+    """
+    model_tgz = get_model_tgz(train_job_name, sm)
+    return model_tgz.parent / "output.tar.gz"
+
+
+def get_model_tgz(train_job_name: str, sm: Optional[Any] = None) -> S3Path:
+    """Get the S3 path of the model.tar.gz produced by a completed train job.
+
+    Args:
+        train_job_name (str): Name of training job.
+        sm (optional): boto3.client for sagemaker. Defaults to None.
+
+    Returns:
+        S3Path: S3 path to the model.tar.gz
+    """
+    if sm is None:
+        # NOTE: use boto3 instead of sagemaker sdk to minimize dependency.
+        import boto3
+
+        sm = boto3.client("sagemaker")
+
+    resp: Dict[str, Any] = sm.describe_training_job(TrainingJobName=train_job_name)
+
+    # Deal with not-completed job.
+    job_status = resp["TrainingJobStatus"]
+    if job_status != "Completed":
+        raise ValueError(f"Training job {train_job_name} has status: {job_status}")
+
+    # Given string s3://bucket/.../output/model.tar.gz, pick only "bucket/.../output/" (with trailing /)
+    s3_prefix = resp["ModelArtifacts"]["S3ModelArtifacts"]
+    return S3Path(s3_prefix[len("s3://") :])
