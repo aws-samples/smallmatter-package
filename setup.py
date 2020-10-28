@@ -24,7 +24,7 @@ extras = {
     "ds": ["pandas", "matplotlib"],
     "lambda.s3": ["boto3-stubs[s3]"],
 }
-all_deps = required_packages
+all_deps = required_packages.copy()
 for extra in extras.values():
     all_deps.extend(extra)
 extras["all"] = all_deps
