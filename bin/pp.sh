@@ -1,4 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Make sure script is NOT sourced.
+if [[ "${BASH_SOURCE[0]}" != $0 ]]; then
+    echo "It appears that you sourced this script instead of executing it." >&2
+    echo "Please set the executable bit 'chmod ugo+x <script>', then re-run." >&2
+    return 1
+fi
 
 declare input=''         # filename.csv
 declare output='output'  # output_dir
