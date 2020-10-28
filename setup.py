@@ -16,13 +16,18 @@ def read(fname):
 
 
 # Declare minimal set for installation
-required_packages: List[str] = ["s3fs", "pandas", "matplotlib"]
+required_packages: List[str] = ["s3fs"]
 
 # Specific use case dependencies
 extras = {
     "sm": ["sagemaker"],
+    "ds": ["pandas", "matplotlib"],
+    "lambda.s3": ["boto3-stubs[s3]"],
 }
-extras["all"] = required_packages + extras["sm"]
+all_deps = required_packages.copy()
+for extra in extras.values():
+    all_deps.extend(extra)
+extras["all"] = all_deps
 
 setup(
     name=_pkg,
