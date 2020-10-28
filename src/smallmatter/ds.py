@@ -142,7 +142,7 @@ class SimpleMatrixPlotter(object):
 
         kwargs = {k: v for k, v in kwargs.items() if k not in {"nrows", "ncols", "figsize", "dpi"}}
         self.fig, _ = plt.subplots(
-            nrows=nrows, ncols=ncols, figsize=(figsize[0] * ncols, figsize[1] * nrows), dpi=100, **kwargs
+            nrows=nrows, ncols=ncols, figsize=(figsize[0] * ncols, figsize[1] * nrows), dpi=dpi, **kwargs
         )
         self.axes = self.fig.axes  # Cache list of axes returned by self.fig.axes
         self.fig.subplots_adjust(hspace=0.35)
@@ -335,7 +335,7 @@ class MontagePager(object):
         mtg_i = self._i
         mtg_fname = self.filename
         for i, itemid in enumerate(self.itemid):
-            row, col = divmod(i, self.smp.ncols)
+            row, col = divmod(i, ncols)
             s = str(itemid).encode("unicode-escape").decode("utf-8")
             self.csvwriter.writerow((f"{mtg_i:04d}-{i:02d}.png", s, mtg_fname, i, row, col))
         self.itemid.clear()
