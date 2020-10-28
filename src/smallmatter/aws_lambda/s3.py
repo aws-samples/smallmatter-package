@@ -1,21 +1,17 @@
-from typing import Dict, List, Optional, cast
+from typing import Dict, Generator, List, Optional, Tuple, cast
 
 import boto3
 from mypy_boto3_s3 import S3Client
 from mypy_boto3_s3.type_defs import TagTypeDef
 
-# Used for replacing invalid characters in tag values
-trs_tag = str.maketrans("$[]", "___")
 
-
-def lambda_exec_ctx_to_dict(context, **kwargs) -> Dict[str, str]:
-    """Convert Lambda execution context to a dictionary."""
-    return {
-        "lambda_req_id": context.aws_request_id,
-        "lambda_log_group": context.log_group_name,
-        "lambda_log_stream": context.log_stream_name.translate(trs_tag),
-        **kwargs,
-    }
+def iterate_event(event) -> Generator[Tuple[str, str], None, None]:
+    """Parse the bucket and object from an S3 event."""
+    for record in event["Records"]:
+        s3_event = record["s3"]
+        s3_bucket = s3_event["bucket"]["name"]
+        s3_key = s3_event["object"]["key"]
+        yield s3_bucket, s3_key
 
 
 def add_tags(bucket: str, obj: str, tags: Dict[str, str], s3_client: Optional[S3Client] = None) -> List[TagTypeDef]:
