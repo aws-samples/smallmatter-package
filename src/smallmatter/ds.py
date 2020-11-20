@@ -1,7 +1,6 @@
 """Core data-science utilities."""
 import csv
 import math
-import os
 import warnings
 from io import BytesIO
 from pathlib import Path
@@ -13,34 +12,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from PIL import Image, ImageChops
 
-from .pathlib import pathify
-
 # Silence warning due to pandas using deprecated matplotlib API.
 # See: https://github.com/pandas-dev/pandas/pull/32444
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
-
-DD_T = Dict[str, Any]
-
-
-class PyExec(object):
-    """Helper class to execute valid Python codes and get all the newly created symbols.
-
-    Typical use-case: to implement a data dictionary that can mix-in Python code to construct certain variables.
-    """
-
-    @staticmethod
-    def from_file(path: Union[str, Path, os.PathLike], valid_symbols: Iterable[str] = []) -> DD_T:
-        """Execute the Python file and export the symbols as a dictionary."""
-        with pathify(path).open("r") as f:
-            return PyExec.from_str(f.read(), valid_symbols)
-
-    @staticmethod
-    def from_str(s, valid_symbols: Iterable[str] = []) -> DD_T:
-        """Execute the Python codes and export the symbols as a dictionary."""
-        dd_raw: DD_T = {}
-        exec(s, dd_raw)
-        dd = {k: dd_raw[k] for k in dd_raw}
-        return dd
 
 
 class DFBuilder(object):
