@@ -44,6 +44,10 @@ class DuplicateError(Exception):
     pass
 
 
+class MissingError(Exception):
+    pass
+
+
 def lower_uniq(it: Iterable[str]) -> List[str]:
     """Convert strings to lower case without any conflict.
 
@@ -65,7 +69,7 @@ def lower_uniq(it: Iterable[str]) -> List[str]:
         DuplicateError: when duplicate members are present.
 
     Returns:
-        List[str]: lower-cased strings.
+        List[str]: lower-cased strings in the same order as `it`.
     """
     input = list(it)
     lowercased: List[str] = [s.lower() for s in input]
@@ -77,6 +81,59 @@ def lower_uniq(it: Iterable[str]) -> List[str]:
         raise DuplicateError(f"Duplicated lowercased members: {dups}")
 
     return lowercased
+
+
+def take_lowerable(src: Sequence[str], dst: Sequence[str]) -> List[str]:
+    """Take lowerables in `src` that matches all in `dst`.
+
+    Typical use-case: to rename column names of multiple dataframes to same lower-case forms.
+
+    Sample usage:
+
+    >>> from smallmatter.common import take_lowerable
+    >>> take_lowerable(src=['col_A', 'col_B', 'col_C'], dst=['col_a', 'col_b'])
+    # ['col_A', 'col_B']
+
+    >>> take_lowerable(src=['col_A', 'col_B', 'col_C'], dst=['col_b', 'col_a'])
+    # ['col_A', 'col_B']
+
+    >>> take_lowerable(src=['col_A'], dst=['col_a', 'col_b'])
+    # MissingError: Missing: {'col_b'}
+
+    Args:
+        src (Iterable[str]): source strings in mixed cases
+        dst (Iterable[str]): target lowercase strings; must be unique.
+
+    Raises:
+        ValueError: when `dst` contains mixed cases.
+        DuplicateError: when `src` or `dst` contains duplicated members.
+        MissingError: when some members in `dst` cannot be found in `src`.
+
+
+    Returns:
+        List[str]: lowerable source strings according to the ordering in `src`.
+    """
+    # Sanity checks
+    if not all([s.lower() == s for s in dst]):
+        raise ValueError(f"Mixed cases in dst: {dst}")
+
+    # Friendly error message for duplicated `dst` elements.
+    if len(dst) != len(set(dst)):
+        cnt = Counter(dst)
+        dups = [k for k, v in cnt.items() if v > 1]
+        raise DuplicateError(f"Duplicated dst: {dups}")
+
+    # Core logic
+    lowered_src = lower_uniq(src)
+    mappings = {k: v for k, v in zip(lowered_src, src)}
+    retval = [v for k, v in mappings.items() if k in set(dst)]
+
+    # Friendly error message for `src` elements that're missing in `dst`.
+    if len(retval) < len(dst):
+        missings = set(dst) - set(mappings)
+        raise MissingError(f"Missing: {missings}")
+
+    return retval
 
 
 def lowerable(src: Sequence[str], dst: Sequence[str]) -> bool:
@@ -116,9 +173,8 @@ def lowerable(src: Sequence[str], dst: Sequence[str]) -> bool:
     Returns:
         List[str]: lowerable source strings
     """
-    # Sanity check on outputs
+    # Friendly error message for duplicated `dst` elements.
     if len(dst) != len(set(dst)):
-        # Friendly error message
         cnt = Counter(dst)
         dups = [k for k, v in cnt.items() if v > 1]
         raise DuplicateError(f"Duplicated dst: {dups}")
