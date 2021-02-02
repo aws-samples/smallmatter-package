@@ -23,4 +23,4 @@ declare -a ARGS=(
     sagemaker.mxnet.estimator.MXNet
 )
 
-python $(get_bin_dir)/try-smproc-stopgap.py "${ARGS[@]}"
+python $(get_bin_dir)/try-smproc-stopgap.py "${ARGS[@]}" "$@"

@@ -27,7 +27,7 @@ def main(
         role=role,
         instance_count=1,
         instance_type="ml.m5.large",
-        s3_prefix=s3_prefix,
+        s3_prefix=str(s3_prefix),
     )
     logger.info("Container uri: {}", processor.image_uri)
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     main(
         args.role,
-        str(args.s3_prefix),
+        args.s3_prefix,
         args.framework_cls,
         args.framework_version,
         args.py_version,
