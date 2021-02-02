@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 from botocore.credentials import AssumeRoleCredentialFetcher
 
@@ -121,8 +121,10 @@ else:
     import logging
 
     from sagemaker.estimator import Framework
+    from sagemaker.network import NetworkConfig
     from sagemaker.processing import ProcessingInput, ScriptProcessor
     from sagemaker.s3 import S3Uploader
+    from sagemaker.session import Session
 
     class FrameworkProcessor(ScriptProcessor):  # type: ignore
         logger = logging.getLogger("sagemaker")
@@ -139,58 +141,91 @@ tar -xzf payload/sourcedir.tar.gz
 
 python {entry_point} "$@"
 """
-
+        # Added new (kw)args for estimator. The rest are from ScriptProcessor with same defaults.
         def __init__(
             self,
-            estimator_cls: Type[Framework],
-            framework_version: str,
+            estimator_cls: Type[Framework],  # New arg
+            framework_version: str,  # New arg
+            s3_prefix: str,  # New arg
             role: str,
             instance_count: int,
             instance_type: str,
-            s3_prefix: str,
-            py_version: str = "py3",
-            **kwargs,
+            py_version: str = "py3",  # New kwarg
+            image_uri: Optional[str] = None,
+            volume_size_in_gb: int = 30,
+            volume_kms_key: Optional[str] = None,
+            output_kms_key: Optional[str] = None,
+            max_runtime_in_seconds: Optional[int] = None,
+            base_job_name: Optional[str] = None,
+            sagemaker_session: Optional[Session] = None,
+            env: Optional[Dict[str, str]] = None,
+            tags: Optional[List[Dict[str, Any]]] = None,
+            network_config: Optional[NetworkConfig] = None,
         ):
             self.estimator_cls = estimator_cls
             self.framework_version = framework_version
             self.py_version = py_version
-            self._try_patch_base_job_name(kwargs)
+
+            image_uri, base_job_name = self._pre_init_normalization(
+                instance_count, instance_type, image_uri, base_job_name
+            )
 
             super().__init__(
                 role=role,
-                image_uri=self._training_image_uri(instance_count, instance_type),
+                image_uri=image_uri,
                 command=["/bin/bash"],
                 instance_count=instance_count,
                 instance_type=instance_type,
-                **kwargs,
+                volume_size_in_gb=volume_size_in_gb,
+                volume_kms_key=volume_kms_key,
+                output_kms_key=output_kms_key,
+                max_runtime_in_seconds=max_runtime_in_seconds,
+                base_job_name=base_job_name,
+                sagemaker_session=sagemaker_session,
+                env=env,
+                tags=tags,
+                network_config=network_config,
             )
 
             self.s3_prefix = s3_prefix
 
-        def _training_image_uri(self, instance_count: int, instance_type: str) -> str:
-            est = self.estimator_cls(
-                entry_point="",
-                role="",
-                framework_version=self.framework_version,
-                py_version=self.py_version,
-                enable_network_isolation=False,
-                instance_count=instance_count,
-                instance_type=instance_type,
-            )
-            return est.training_image_uri()
-
-        def _try_patch_base_job_name(self, d: Dict[str, Any]) -> None:
-            if d.get("base_job_name", None) is None:
-                d["base_job_name"] = self.estimator_cls._framework_name
-                if self.estimator_cls._framework_name is None:
+        def _pre_init_normalization(
+            self,
+            instance_count: int,
+            instance_type: str,
+            image_uri: Optional[str] = None,
+            base_job_name: Optional[str] = None,
+        ) -> Tuple[str, str]:
+            # Normalize base_job_name
+            if base_job_name is None:
+                base_job_name = self.estimator_cls._framework_name
+                if base_job_name is None:
                     self.logger.warning("Framework name is None. Please check with the maintainer.")
+                    base_job_name = str(base_job_name)  # Keep mypy happy.
+
+            # Normalize image uri.
+            if image_uri is None:
+                # Estimator used only to probe image uri, so can get away with some dummy values.
+                est = self.estimator_cls(
+                    framework_version=self.framework_version,
+                    instance_type=instance_type,
+                    py_version=self.py_version,
+                    image_uri=image_uri,
+                    entry_point="",
+                    role="",
+                    enable_network_isolation=False,
+                    instance_count=instance_count,
+                )
+                image_uri = est.training_image_uri()
+
+            return image_uri, base_job_name
 
         def run(
             self,
             entry_point: str,
-            source_dir: Optional[str] = None,
-            dependencies: Optional[Sequence[str]] = None,
-            git_config: Optional[str] = None,
+            source_dir: str,
+            dependencies: Optional[List[str]] = None,
+            git_config: Optional[Dict[str, str]] = None,
             inputs=None,
             outputs=None,
             arguments=None,
@@ -205,18 +240,6 @@ python {entry_point} "$@"
 
             estimator = self._upload_payload(entry_point, source_dir, dependencies, git_config, job_name)
             inputs = self._patch_inputs_with_payload(inputs, estimator._hyperparameters["sagemaker_submit_directory"])
-
-            # region: delete
-            # FIXME: delete
-            # Environment variables to tell the bootstrapper (i.e., runproc.sh) the filename of the
-            # python entrypoint. Strictly speaking, runproc.sh needs only sagemaker_program, but
-            # we'll inject all sagemaker_* just in case.
-            # sm_env = {k: str(v) for k, v in estimator._hyperparameters.items() if k.startswith("sagemaker_")}
-            # if self.env is None:  # type: ignore
-            #    self.env = sm_env
-            # else:
-            #    self.env.update(sm_env)
-            # endregion
 
             # Upload the bootstrapping code as s3://.../jobname/source/runproc.sh.
             s3_runproc_sh = S3Uploader.upload_string_as_file_body(
@@ -239,22 +262,32 @@ python {entry_point} "$@"
                 kms_key=kms_key,
             )
 
-        def _upload_payload(self, entry_point, source_dir, dependencies, git_config, job_name) -> Framework:
+        def _upload_payload(
+            self,
+            entry_point: str,
+            source_dir: str,
+            dependencies: Optional[List[str]],
+            git_config: Optional[Dict[str, str]],
+            job_name: str,
+        ) -> Framework:
             # A new estimator instance is required, because each call to ScriptProcessor.run() can
             # use different codes.
-
             estimator = self.estimator_cls(
-                role=self.role,
                 entry_point=entry_point,
                 source_dir=source_dir,
                 dependences=dependencies,
                 git_config=git_config,
                 framework_version=self.framework_version,
                 py_version=self.py_version,
-                code_location=self.s3_prefix,  # Estimator will use s3_prefix/jobname/output/source.tar.gz
-                enable_network_isolation=False,
-                instance_count=self.instance_count,
+                code_location=self.s3_prefix,  # Estimator will use <code_location>/jobname/output/source.tar.gz
+                enable_network_isolation=False,  # If true, estimator uploads to input channel. Not what we want!
+                image_uri=self.image_uri,  # The image uri is already normalized by this point.
+                role=self.role,
                 instance_type=self.instance_type,
+                instance_count=self.instance_count,
+                sagemaker_session=self.sagemaker_session,
+                debugger_hook_config=False,
+                disable_profiler=True,
             )
 
             estimator._prepare_for_training(job_name=job_name)
