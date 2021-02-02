@@ -1,6 +1,7 @@
-from copy import copy
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
+
+from botocore.credentials import AssumeRoleCredentialFetcher
 
 from .pathlib import S3Path
 
@@ -141,22 +142,23 @@ python {entry_point} "$@"
 
         def __init__(
             self,
-            estimator: Framework,
+            estimator_cls: Type[Framework],
+            framework_version: str,
             role: str,
             instance_count: int,
             instance_type: str,
             s3_prefix: str,
+            py_version: str = "py3",
             **kwargs,
         ):
-            self.estimator = estimator
-            if kwargs.get("base_job_name", None) is None:
-                kwargs["base_job_name"] = self.estimator._framework_name
-                if self.estimator._framework_name is None:
-                    self.logger.warning("Framework name is None. Please check with the maintainer.")
+            self.estimator_cls = estimator_cls
+            self.framework_version = framework_version
+            self.py_version = py_version
+            self._try_patch_base_job_name(kwargs)
 
             super().__init__(
                 role=role,
-                image_uri=estimator.training_image_uri(),
+                image_uri=self._training_image_uri(instance_count, instance_type),
                 command=["/bin/bash"],
                 instance_count=instance_count,
                 instance_type=instance_type,
@@ -164,6 +166,24 @@ python {entry_point} "$@"
             )
 
             self.s3_prefix = s3_prefix
+
+        def _training_image_uri(self, instance_count: int, instance_type: str) -> str:
+            est = self.estimator_cls(
+                entry_point="",
+                role="",
+                framework_version=self.framework_version,
+                py_version=self.py_version,
+                enable_network_isolation=False,
+                instance_count=instance_count,
+                instance_type=instance_type,
+            )
+            return est.training_image_uri()
+
+        def _try_patch_base_job_name(self, d: Dict[str, Any]) -> None:
+            if d.get("base_job_name", None) is None:
+                d["base_job_name"] = self.estimator_cls._framework_name
+                if self.estimator_cls._framework_name is None:
+                    self.logger.warning("Framework name is None. Please check with the maintainer.")
 
         def run(
             self,
@@ -184,7 +204,7 @@ python {entry_point} "$@"
                 job_name = self._generate_current_job_name()
 
             estimator = self._upload_payload(entry_point, source_dir, dependencies, git_config, job_name)
-            inputs = self.patch_inputs_with_payload(estimator._hyperparameters["sagemaker_submit_directory"])
+            inputs = self._patch_inputs_with_payload(inputs, estimator._hyperparameters["sagemaker_submit_directory"])
 
             # region: delete
             # FIXME: delete
@@ -204,6 +224,7 @@ python {entry_point} "$@"
                 desired_s3_uri=f"{self.s3_prefix}/{job_name}/source/runproc.sh",
                 sagemaker_session=self.sagemaker_session,
             )
+            self.logger.info("runproc.sh uploaded to", s3_runproc_sh)
 
             # Submit a processing job.
             super().run(
@@ -219,13 +240,22 @@ python {entry_point} "$@"
             )
 
         def _upload_payload(self, entry_point, source_dir, dependencies, git_config, job_name) -> Framework:
-            # Be consistent with ScriptProcessor where self.run() can use different codes.
-            estimator = copy(self.estimator)
-            estimator.entry_point = entry_point
-            estimator.source_dir = source_dir
-            estimator.dependencies = dependencies
-            estimator.git_config = git_config
-            estimator._enable_network_isolation = False
+            # A new estimator instance is required, because each call to ScriptProcessor.run() can
+            # use different codes.
+
+            estimator = self.estimator_cls(
+                role=self.role,
+                entry_point=entry_point,
+                source_dir=source_dir,
+                dependences=dependencies,
+                git_config=git_config,
+                framework_version=self.framework_version,
+                py_version=self.py_version,
+                code_location=self.s3_prefix,  # Estimator will use s3_prefix/jobname/output/source.tar.gz
+                enable_network_isolation=False,
+                instance_count=self.instance_count,
+                instance_type=self.instance_type,
+            )
 
             estimator._prepare_for_training(job_name=job_name)
             self.logger.info(
