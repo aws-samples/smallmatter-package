@@ -1,8 +1,7 @@
 import argparse
+import importlib
 import os
 from pathlib import Path
-
-import mxnet
 
 if __name__ == "__main__":
     print("ENV_VARS:", os.environ)
@@ -16,7 +15,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("My arguments:", vars(args))
 
+    pkgs = dict()
+    for module_name in ["mxnet", "sklearn", "torch", "tensorflow", "xgboost"]:
+        try:
+            pkgs[module_name] = importlib.import_module(module_name)
+        except ModuleNotFoundError:
+            pass
+
     with (args.output_data_dir / "processing.jsonl").open("w") as f:
-        f.write(f'{{"module": "{mxnet.__name__}", "version": "{mxnet.__version__}"}}\n')
+        for mod in pkgs.values():
+            f.write(f'{{"module": "{mod.__name__}", "version": "{mod.__version__}"}}\n')  # type: ignore
 
     print("Completed processing python entrypoint.")
