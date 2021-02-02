@@ -1,7 +1,9 @@
 import argparse
-import importlib
 import os
 from pathlib import Path
+
+import dummy_util
+import version_prober
 
 if __name__ == "__main__":
     print("ENV_VARS:", os.environ)
@@ -15,13 +17,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("My arguments:", vars(args))
 
-    pkgs = dict()
-    for module_name in ["mxnet", "sklearn", "torch", "tensorflow", "xgboost"]:
-        try:
-            pkgs[module_name] = importlib.import_module(module_name)
-        except ModuleNotFoundError:
-            pass
+    # Some logic
+    print("Helper function in file:", version_prober.__file__)
+    print("Dummy function in file:", dummy_util.__file__)
+    pkgs = version_prober.probe_ml_frameworks()
 
+    # Write output
     with (args.output_data_dir / "processing.jsonl").open("w") as f:
         for mod in pkgs.values():
             f.write(f'{{"module": "{mod.__name__}", "version": "{mod.__version__}"}}\n')  # type: ignore

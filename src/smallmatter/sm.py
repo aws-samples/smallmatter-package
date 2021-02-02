@@ -275,7 +275,7 @@ python {entry_point} "$@"
             estimator = self.estimator_cls(
                 entry_point=entry_point,
                 source_dir=source_dir,
-                dependences=dependencies,
+                dependencies=dependencies,
                 git_config=git_config,
                 framework_version=self.framework_version,
                 py_version=self.py_version,

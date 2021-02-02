@@ -43,6 +43,7 @@ def main(
     processor.run(
         entry_point="processing.py",
         source_dir="./sourcedir",
+        dependencies=["./dummy_util"],
         inputs=None,
         outputs=[
             ProcessingOutput(source="/opt/ml/processing/output", destination=output_dst),
