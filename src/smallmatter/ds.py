@@ -12,6 +12,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from PIL import Image, ImageChops
 
+from .pathlib import Path2
+
 # Silence warning due to pandas using deprecated matplotlib API.
 # See: https://github.com/pandas-dev/pandas/pull/32444
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
@@ -40,6 +42,23 @@ class DFBuilder(object):
     def df(self):
         """Return the dataframe representation of this instance."""
         return pd.DataFrame.from_dict({i: row for i, row in enumerate(self.rows)}, orient="index", columns=self.columns)
+
+
+def read_protected_excel(fname: Path2, pwd: str, **kwargs) -> pd.DataFrame:
+    """Load a protected Excel file into a pandas.read_excel(..., engine='openpyxl', ...)."""
+    import msoffcrypto  # Inner import to avoid imposing dependency to non-users.
+
+    decrypted = BytesIO()
+    with open(fname, "rb") as f:
+        file = msoffcrypto.OfficeFile(f)
+        file.load_key(password=pwd)
+        file.decrypt(decrypted)
+
+    if ("engine" in kwargs) and (kwargs["engine"] != "openpyxl"):
+        warnings.warn("openpyxl engine is recommended.")
+
+    kwargs["engine"] = "openpyxl"
+    return pd.read_excel(decrypted, **kwargs)
 
 
 def json_np_converter(o: Union[np.int64, np.float64]) -> Union[int, float]:
