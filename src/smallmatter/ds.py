@@ -3,6 +3,7 @@ import csv
 import math
 import warnings
 from io import BytesIO
+from os import PathLike
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -12,7 +13,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from PIL import Image, ImageChops
 
-from .pathlib import Path2
+from .pathlib import Path2, pathify
 
 # Silence warning due to pandas using deprecated matplotlib API.
 # See: https://github.com/pandas-dev/pandas/pull/32444
@@ -44,12 +45,13 @@ class DFBuilder(object):
         return pd.DataFrame.from_dict({i: row for i, row in enumerate(self.rows)}, orient="index", columns=self.columns)
 
 
-def read_protected_excel(fname: Path2, pwd: str, **kwargs) -> pd.DataFrame:
+def read_protected_excel(fname: Union[str, Path, PathLike], pwd: str, **kwargs) -> pd.DataFrame:
     """Load a protected Excel file into a pandas.read_excel(..., engine='openpyxl', ...)."""
     import msoffcrypto  # Inner import to avoid imposing dependency to non-users.
 
     decrypted = BytesIO()
-    with open(fname, "rb") as f:
+    p = pathify(fname)
+    with p.open("rb") as f:
         file = msoffcrypto.OfficeFile(f)
         file.load_key(password=pwd)
         file.decrypt(decrypted)
