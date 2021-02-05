@@ -29,4 +29,5 @@ declare -a ARGS=(
     #sagemaker.pytorch.estimator.PyTorch
 )
 
-python $(get_bin_dir)/try-smproc-stopgap.py "${ARGS[@]}" "$@"
+cd $(get_bin_dir)
+python ./try-smproc-stopgap.py "${ARGS[@]}" "$@"

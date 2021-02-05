@@ -136,9 +136,6 @@ tar -xzf payload/sourcedir.tar.gz
 
 [[ -f 'requirements.txt' ]] && pip install -r requirements.txt
 
-#echo sagemaker_program=$sagemaker_program
-#python $sagemaker_program "$@"
-
 python {entry_point} "$@"
 """
         # Added new (kw)args for estimator. The rest are from ScriptProcessor with same defaults.
