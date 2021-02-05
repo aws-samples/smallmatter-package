@@ -106,27 +106,29 @@ class S3Path(Path2):
         """Return True always."""
         return True
 
+    def _try_raise_closed(self):
+        # Maintain consistent behavior with pathlib.Path, but only for python<3.9.
+        # See https://bugs.python.org/issue39682 -- python 3.9 removed self._closed.
+        try:
+            if self._closed:
+                self._raise_closed()
+        except Exception:
+            pass
+
     def open(self, *args, **kwargs):
         """[summary].
 
         args & kwargs: for S3FileSystem.open()
         """
-        # Maintain consistent behavior with pathlib.Path
-        if self._closed:
-            self._raise_closed()
-
+        self._try_raise_closed()
         return self._accessor.open(self.__str__(), *args, **kwargs)
 
     def chmod(self, *args, **kwargs):
-        # Maintain consistent behavior with pathlib.Path
-        if self._closed:
-            self._raise_closed()
+        self._try_raise_closed()
         raise NotImplementedError()
 
     def mkdir(self, *args, **kwargs):
-        # Maintain consistent behavior with pathlib.Path
-        if self._closed:
-            self._raise_closed()
+        self._try_raise_closed()
         raise NotImplementedError()
 
     def read_bytes(self, *args, **kwargs):
@@ -143,16 +145,12 @@ class S3Path(Path2):
 
     def unlink(self, *args, **kwargs):
         """Remove this file."""
-        # Maintain consistent behavior with pathlib.Path
-        if self._closed:
-            self._raise_closed()
+        self._try_raise_closed()
         raise NotImplementedError()
 
     def rmdir(self, *args, **kwargs):
         """Remove this directory (should it be empty? Check s3fs/core.py)."""
-        # Maintain consistent behavior with pathlib.Path
-        if self._closed:
-            self._raise_closed()
+        self._try_raise_closed()
         raise NotImplementedError()
 
     def exists(self, *args, **kwargs):
@@ -172,10 +170,7 @@ class S3Path(Path2):
 
         Does not yield any result for the special paths '.' and '..'.
         """
-        # Maintain consistent behavior with pathlib.Path
-        if self._closed:
-            self._raise_closed()
-
+        self._try_raise_closed()
         raise NotImplementedError()
 
     def glob(self, pattern):
