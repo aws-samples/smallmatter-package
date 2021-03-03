@@ -16,31 +16,52 @@ certain single-file operations on local filesystem and Amazon S3.
 - `smallmatter.pathlib.S3Path`: `pathlib`-compatible interface to abstract
 certain single-file operations on Amazon S3.
 
-- `smallmatter.typecheck`: check possible dtypes of a csv file.
-  * For each column, list the auto-detected dtypes. Useful to check data
-    for data qualities (e.g., mixed-in string and numbers in the same column).
-  * Generate html reports of the auto-detected dtypes.
-  * CLI interface to generate those html reports.
-
 - `smallmatter.sm`: utilities for Amazon SageMaker
-  * `get_sm_execution_role()`: an opinionated function to unify fetching the
-    execution role inside and outside of a notebook instance.
-  * `PyTestHelpers`: intended to run pytest tests on a git repo with multiple
+  - `smallmatter.sm.FrameworkProcessor`: a prototype to support SageMaker
+    Python processing jobs that accept multiple files. This is done through
+    `source_dir`, `depedencies`, `requirements.txt`, and `git_config`, similar
+    to SageMaker estimator APIs. Furthermoe, this `FrameworkProcessor` supports
+    the SageMaker managed framework containers (i.e., MXNet, PyTorch, TensorFlow,
+    Scikit-learn, and XGBoost).
+
+    It aims to give you familiar workflow of (1) instantiate a processor, then
+    immediately (2) call the `run(...)` method.
+
+    Here's an [example](`https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.py#L14-L53`)
+    on how to use this `FrameworkProcessor` class -- right now, the example is
+    a `.py` file as opposed to `.ipynb`. Run the Python example using
+    [this shell script](https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.sh),
+    but you must first change the S3 prefix and execution role, then optionally
+    choose your prefered container.
+
+    It slightly changes the processing API by adding a SageMaker Framework
+    estimator, which was done for two purposes: (1) auto-detect container uri,
+    and (2) re-use the packaging mechanism in the estimator to upload to
+    `s3://.../sourcedir.tar.gz`.
+
+  - `PyTestHelpers`: intended to run pytest tests on a git repo with multiple
     SageMaker sourcedirs.
+  - `get_sm_execution_role()`: an opinionated function to unify fetching the
+    execution role inside and outside of a notebook instance.
+
+- `smallmatter.typecheck`: check possible dtypes of a csv file.
+  - For each column, list the auto-detected dtypes. Useful to check data
+    for data qualities (e.g., mixed-in string and numbers in the same column).
+  - Generate html reports of the auto-detected dtypes.
+  - CLI interface to generate those html reports.
 
 - `smallmatter.ds`: for rapid prototyping of some data science tasks.
-  * `PyExec`: typical use-case: to implement data dictionary or config files
-    that can mix-in Python code to construct certain variables.
-  * `DFBuilder`: a helper class to build a Pandas dataframe incrementally,
-    row-by-row.
-  * `json_np_converter`: convert numpy values to JSON-compliant data type.
-  * `SimpleMatrixPlotter`: a simpler helper class to fill-in supplot one after
+  - `SimpleMatrixPlotter`: a simpler helper class to fill-in supplot one after
     another.
-  * `MontagePager`: a pager to group and save subplots into multiple montage
+  - `MontagePager`: a pager to group and save subplots into multiple montage
     image files.
+  - `DFBuilder`: a helper class to build a Pandas dataframe incrementally,
+    row-by-row.
+  - `json_np_converter`: convert numpy values to JSON-compliant data type.
+  - `PyExec`: typical use-case: to implement data dictionary or config files
+    that can mix-in Python code to construct certain variables.
 
 - `bin/pp.sh`: standard template to run `pandas-profiling`.
-
 
 ## Installation
 
