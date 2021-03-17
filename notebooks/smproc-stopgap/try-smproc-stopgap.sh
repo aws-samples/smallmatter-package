@@ -17,14 +17,16 @@ get_bin_dir() {
 }
 
 declare -a ARGS=(
+    --cls_type framework_processor
+
     --s3-prefix s3://bucket/prefix/sagemaker
     --role arn:aws:iam::111122223333:role/service-role/my-amazon-sagemaker-execution-role-1234
 
-    # Flags for MXNet container
+    # Flags for FrameworkProcessor + MXNet container
     --framework_version 1.6.0
     sagemaker.mxnet.estimator.MXNet
 
-    # Flags for PyTorch container
+    # Flags for FrameworkProcessor + PyTorch container
     #--framework_version 1.6.0
     #sagemaker.pytorch.estimator.PyTorch
 )
