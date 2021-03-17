@@ -121,10 +121,15 @@ else:
     import logging
 
     from sagemaker.estimator import Framework
+    from sagemaker.mxnet.estimator import MXNet
     from sagemaker.network import NetworkConfig
     from sagemaker.processing import ProcessingInput, ScriptProcessor
+    from sagemaker.pytorch.estimator import PyTorch
     from sagemaker.s3 import S3Uploader
     from sagemaker.session import Session
+    from sagemaker.sklearn.estimator import SKLearn
+    from sagemaker.tensorflow.estimator import TensorFlow
+    from sagemaker.xgboost.estimator import XGBoost
 
     class FrameworkProcessor(ScriptProcessor):  # type: ignore
         logger = logging.getLogger("sagemaker")
@@ -313,3 +318,213 @@ python {entry_point} "$@"
                 inputs = []
             inputs.append(ProcessingInput(source=s3_payload, destination="/opt/ml/processing/input/code/payload/"))
             return inputs
+
+    class MXNetProcessor(FrameworkProcessor):
+        estimator_cls = MXNet
+
+        def __init__(
+            self,
+            framework_version: str,  # New arg
+            s3_prefix: str,  # New arg
+            role: str,
+            instance_count: int,
+            instance_type: str,
+            py_version: str = "py3",  # New kwarg
+            image_uri: Optional[str] = None,
+            volume_size_in_gb: int = 30,
+            volume_kms_key: Optional[str] = None,
+            output_kms_key: Optional[str] = None,
+            max_runtime_in_seconds: Optional[int] = None,
+            base_job_name: Optional[str] = None,
+            sagemaker_session: Optional[Session] = None,
+            env: Optional[Dict[str, str]] = None,
+            tags: Optional[List[Dict[str, Any]]] = None,
+            network_config: Optional[NetworkConfig] = None,
+        ):
+            super().__init__(
+                self.estimator_cls,
+                framework_version,
+                s3_prefix,
+                role,
+                instance_count,
+                instance_type,
+                py_version,
+                image_uri,
+                volume_size_in_gb,
+                volume_kms_key,
+                output_kms_key,
+                max_runtime_in_seconds,
+                base_job_name,
+                sagemaker_session,
+                env,
+                tags,
+                network_config,
+            )
+
+    class PyTorchProcessor(FrameworkProcessor):
+        estimator_cls = PyTorch
+
+        def __init__(
+            self,
+            framework_version: str,  # New arg
+            s3_prefix: str,  # New arg
+            role: str,
+            instance_count: int,
+            instance_type: str,
+            py_version: str = "py3",  # New kwarg
+            image_uri: Optional[str] = None,
+            volume_size_in_gb: int = 30,
+            volume_kms_key: Optional[str] = None,
+            output_kms_key: Optional[str] = None,
+            max_runtime_in_seconds: Optional[int] = None,
+            base_job_name: Optional[str] = None,
+            sagemaker_session: Optional[Session] = None,
+            env: Optional[Dict[str, str]] = None,
+            tags: Optional[List[Dict[str, Any]]] = None,
+            network_config: Optional[NetworkConfig] = None,
+        ):
+            super().__init__(
+                self.estimator_cls,
+                framework_version,
+                s3_prefix,
+                role,
+                instance_count,
+                instance_type,
+                py_version,
+                image_uri,
+                volume_size_in_gb,
+                volume_kms_key,
+                output_kms_key,
+                max_runtime_in_seconds,
+                base_job_name,
+                sagemaker_session,
+                env,
+                tags,
+                network_config,
+            )
+
+    class SKLearnProcessorAlt(FrameworkProcessor):
+        estimator_cls = SKLearn
+
+        def __init__(
+            self,
+            framework_version: str,  # New arg
+            s3_prefix: str,  # New arg
+            role: str,
+            instance_count: int,
+            instance_type: str,
+            py_version: str = "py3",  # New kwarg
+            image_uri: Optional[str] = None,
+            volume_size_in_gb: int = 30,
+            volume_kms_key: Optional[str] = None,
+            output_kms_key: Optional[str] = None,
+            max_runtime_in_seconds: Optional[int] = None,
+            base_job_name: Optional[str] = None,
+            sagemaker_session: Optional[Session] = None,
+            env: Optional[Dict[str, str]] = None,
+            tags: Optional[List[Dict[str, Any]]] = None,
+            network_config: Optional[NetworkConfig] = None,
+        ):
+            super().__init__(
+                self.estimator_cls,
+                framework_version,
+                s3_prefix,
+                role,
+                instance_count,
+                instance_type,
+                py_version,
+                image_uri,
+                volume_size_in_gb,
+                volume_kms_key,
+                output_kms_key,
+                max_runtime_in_seconds,
+                base_job_name,
+                sagemaker_session,
+                env,
+                tags,
+                network_config,
+            )
+
+    class TensorFlowProcessor(FrameworkProcessor):
+        estimator_cls = TensorFlow
+
+        def __init__(
+            self,
+            framework_version: str,  # New arg
+            s3_prefix: str,  # New arg
+            role: str,
+            instance_count: int,
+            instance_type: str,
+            py_version: str = "py3",  # New kwarg
+            image_uri: Optional[str] = None,
+            volume_size_in_gb: int = 30,
+            volume_kms_key: Optional[str] = None,
+            output_kms_key: Optional[str] = None,
+            max_runtime_in_seconds: Optional[int] = None,
+            base_job_name: Optional[str] = None,
+            sagemaker_session: Optional[Session] = None,
+            env: Optional[Dict[str, str]] = None,
+            tags: Optional[List[Dict[str, Any]]] = None,
+            network_config: Optional[NetworkConfig] = None,
+        ):
+            super().__init__(
+                self.estimator_cls,
+                framework_version,
+                s3_prefix,
+                role,
+                instance_count,
+                instance_type,
+                py_version,
+                image_uri,
+                volume_size_in_gb,
+                volume_kms_key,
+                output_kms_key,
+                max_runtime_in_seconds,
+                base_job_name,
+                sagemaker_session,
+                env,
+                tags,
+                network_config,
+            )
+
+    class XGBoostEstimator(FrameworkProcessor):
+        estimator_cls = XGBoost
+
+        def __init__(
+            self,
+            framework_version: str,  # New arg
+            s3_prefix: str,  # New arg
+            role: str,
+            instance_count: int,
+            instance_type: str,
+            py_version: str = "py3",  # New kwarg
+            image_uri: Optional[str] = None,
+            volume_size_in_gb: int = 30,
+            volume_kms_key: Optional[str] = None,
+            output_kms_key: Optional[str] = None,
+            max_runtime_in_seconds: Optional[int] = None,
+            base_job_name: Optional[str] = None,
+            sagemaker_session: Optional[Session] = None,
+            env: Optional[Dict[str, str]] = None,
+            tags: Optional[List[Dict[str, Any]]] = None,
+            network_config: Optional[NetworkConfig] = None,
+        ):
+            super().__init__(
+                self.estimator_cls,
+                framework_version,
+                s3_prefix,
+                role,
+                instance_count,
+                instance_type,
+                py_version,
+                image_uri,
+                volume_size_in_gb,
+                volume_kms_key,
+                output_kms_key,
+                max_runtime_in_seconds,
+                base_job_name,
+                sagemaker_session,
+                env,
+                tags,
+                network_config,
+            )
