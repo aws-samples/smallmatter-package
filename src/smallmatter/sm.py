@@ -123,7 +123,7 @@ else:
     from sagemaker.estimator import Framework
     from sagemaker.mxnet.estimator import MXNet
     from sagemaker.network import NetworkConfig
-    from sagemaker.processing import ProcessingInput, ScriptProcessor
+    from sagemaker.processing import ProcessingInput, ProcessingOutput, ScriptProcessor
     from sagemaker.pytorch.estimator import PyTorch
     from sagemaker.s3 import S3Uploader
     from sagemaker.session import Session
@@ -169,34 +169,29 @@ python {entry_point} "$@"
             """Initializes a ``FrameworkProcessor`` instance.
 
             The ``FrameworkProcessor`` handles Amazon SageMaker Processing tasks for jobs
-            using a machine learning framework, which allows for providing a script to be
-            run as part of the Processing Job.
+            using a machine learning framework, which allows for a set of Python scripts
+            to be run as part of the Processing Job.
 
             Args:
-                estimator_cls (type):
+                estimator_cls (type): A subclass of ``Framework`` estimator
                 framework_version (str): The version of the framework
                 s3_prefix (str): The S3 prefix URI where custom code will be
-                    uploaded (default: None) - don't include a trailing slash since
-                    a string prepended with a "/" is appended to ``code_location``. The code
-                    file uploaded to S3 is 'code_location/job-name/source/sourcedir.tar.gz'.
-                role (str): An AWS IAM role name or ARN. Amazon SageMaker Processing
-                    uses this role to access AWS resources, such as
-                    data stored in Amazon S3.
-                command ([str]): The command to run, along with any command-line flags.
-                    Example: ["python3", "-v"].
-                instance_count (int): The number of instances to run
-                    a processing job with.
-                instance_type (str): The type of EC2 instance to use for
-                    processing, for example, 'ml.c4.xlarge'.
+                    uploaded - don't include a trailing slash since a string prepended
+                    with a "/" is appended to ``s3_prefix``. The code file uploaded to S3
+                    is 's3_prefix/job-name/source/sourcedir.tar.gz'.
+                role (str): An AWS IAM role name or ARN. Amazon SageMaker Processing uses
+                    this role to access AWS resources, such as data stored in Amazon S3.
+                instance_count (int): The number of instances to run a processing job with.
+                instance_type (str): The type of EC2 instance to use for processing, for
+                    example, 'ml.c4.xlarge'.
                 py_version (str): Python version you want to use for executing your
-                    model training code. One of 'py2' or 'py3'. Defaults to ``None``. Required
-                    unless ``image_uri`` is provided.
+                    model training code. One of 'py2' or 'py3'. Defaults to 'py3'. Value
+                    is ignored when ``image_uri`` is provided.
                 image_uri (str): The URI of the Docker image to use for the
                     processing jobs.
                 volume_size_in_gb (int): Size in GB of the EBS volume
                     to use for storing data during processing (default: 30).
-                volume_kms_key (str): A KMS key for the processing
-                    volume (default: None).
+                volume_kms_key (str): A KMS key for the processing volume (default: None).
                 output_kms_key (str): The KMS key ID for processing job outputs (default: None).
                 max_runtime_in_seconds (int): Timeout in seconds (default: None).
                     After this amount of time, Amazon SageMaker terminates the job,
@@ -280,25 +275,25 @@ python {entry_point} "$@"
         def run(
             self,
             entry_point: str,
-            source_dir: str,
+            source_dir: Optional[str],
             dependencies: Optional[List[str]] = None,
             git_config: Optional[Dict[str, str]] = None,
-            inputs=None,
-            outputs=None,
-            arguments=None,
-            wait=True,
-            logs=True,
-            job_name=None,
-            experiment_config=None,
-            kms_key=None,
+            inputs: Optional[List[ProcessingInput]] = None,
+            outputs: Optional[List[ProcessingOutput]] = None,
+            arguments: Optional[List[str]] = None,
+            wait: bool = True,
+            logs: bool = True,
+            job_name: Optional[str] = None,
+            experiment_config: Optional[Dict[str, str]] = None,
+            kms_key: Optional[str] = None,
         ):
             """Runs a processing job.
 
             Args:
-                entrypoint (str): Path (absolute or relative) to the local Python source file which
-                    should be executed as the entry point to training. If ``source_dir`` is
-                    specified, then ``entry_point`` must point to a file located at the root of
-                    ``source_dir``.
+                entrypoint (str): Path (absolute or relative) to the local Python source
+                    file which should be executed as the entry point to training. If
+                    ``source_dir`` is specified, then ``entry_point`` must point to a file
+                    located at the root of ``source_dir``.
                 source_dir (str): Path (absolute, relative or an S3 URI) to a directory
                     with any other training source code dependencies aside from the entry
                     point file (default: None). If ``source_dir`` is an S3 URI, it must
@@ -409,7 +404,7 @@ python {entry_point} "$@"
         def _upload_payload(
             self,
             entry_point: str,
-            source_dir: str,
+            source_dir: Optional[str],
             dependencies: Optional[List[str]],
             git_config: Optional[Dict[str, str]],
             job_name: str,
