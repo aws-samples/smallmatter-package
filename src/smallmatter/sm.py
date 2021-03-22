@@ -457,6 +457,8 @@ python {entry_point} "$@"
             return inputs
 
     class MXNetProcessor(FrameworkProcessor):
+        """Handles Amazon SageMaker processing tasks for jobs using MXNet containers."""
+
         estimator_cls = MXNet
 
         def __init__(
@@ -478,6 +480,19 @@ python {entry_point} "$@"
             tags: Optional[List[Dict[str, Any]]] = None,
             network_config: Optional[NetworkConfig] = None,
         ):
+            """This processor executes a Python script in a managed MXNet execution environment.
+
+            Unless ``image_uri`` is specified, the MXNet environment is an
+            Amazon-built Docker container that executes functions defined in the supplied
+            ``entry_point`` Python script.
+
+            The arguments have the exact same meaning as in ``FrameworkProcessor``.
+
+            .. tip::
+
+                You can find additional parameters for initializing this class at
+                :class:`~smallmatter.ds.FrameworkProcessor`.
+            """
             super().__init__(
                 self.estimator_cls,
                 framework_version,
@@ -499,6 +514,8 @@ python {entry_point} "$@"
             )
 
     class PyTorchProcessor(FrameworkProcessor):
+        """Handles Amazon SageMaker processing tasks for jobs using PyTorch containers."""
+
         estimator_cls = PyTorch
 
         def __init__(
@@ -520,6 +537,19 @@ python {entry_point} "$@"
             tags: Optional[List[Dict[str, Any]]] = None,
             network_config: Optional[NetworkConfig] = None,
         ):
+            """This processor executes a Python script in a PyTorch execution environment.
+
+            Unless ``image_uri`` is specified, the PyTorch environment is an
+            Amazon-built Docker container that executes functions defined in the supplied
+            ``entry_point`` Python script.
+
+            The arguments have the exact same meaning as in ``FrameworkProcessor``.
+
+            .. tip::
+
+                You can find additional parameters for initializing this class at
+                :class:`~smallmatter.ds.FrameworkProcessor`.
+            """
             super().__init__(
                 self.estimator_cls,
                 framework_version,
@@ -541,6 +571,8 @@ python {entry_point} "$@"
             )
 
     class SKLearnProcessorAlt(FrameworkProcessor):
+        """Handles Amazon SageMaker processing tasks for jobs using scikit-learn containers."""
+
         estimator_cls = SKLearn
 
         def __init__(
@@ -562,6 +594,22 @@ python {entry_point} "$@"
             tags: Optional[List[Dict[str, Any]]] = None,
             network_config: Optional[NetworkConfig] = None,
         ):
+            """This processor executes a Python script in a scikit-learn execution environment.
+
+            This class has an 'Alt' suffix to denote it as an alternative to built-in
+            ``sagemaker.sklearn.processing.SKLearnProcessor``.
+
+            Unless ``image_uri`` is specified, the scikit-learn environment is an
+            Amazon-built Docker container that executes functions defined in the supplied
+            ``entry_point`` Python script.
+
+            The arguments have the exact same meaning as in ``FrameworkProcessor``.
+
+            .. tip::
+
+                You can find additional parameters for initializing this class at
+                :class:`~smallmatter.ds.FrameworkProcessor`.
+            """
             super().__init__(
                 self.estimator_cls,
                 framework_version,
@@ -583,6 +631,8 @@ python {entry_point} "$@"
             )
 
     class TensorFlowProcessor(FrameworkProcessor):
+        """Handles Amazon SageMaker processing tasks for jobs using TensorFlow containers."""
+
         estimator_cls = TensorFlow
 
         def __init__(
@@ -604,6 +654,19 @@ python {entry_point} "$@"
             tags: Optional[List[Dict[str, Any]]] = None,
             network_config: Optional[NetworkConfig] = None,
         ):
+            """This processor executes a Python script in a TensorFlow execution environment.
+
+            Unless ``image_uri`` is specified, the TensorFlow environment is an
+            Amazon-built Docker container that executes functions defined in the supplied
+            ``entry_point`` Python script.
+
+            The arguments have the exact same meaning as in ``FrameworkProcessor``.
+
+            .. tip::
+
+                You can find additional parameters for initializing this class at
+                :class:`~smallmatter.ds.FrameworkProcessor`.
+            """
             super().__init__(
                 self.estimator_cls,
                 framework_version,
@@ -625,6 +688,8 @@ python {entry_point} "$@"
             )
 
     class XGBoostEstimator(FrameworkProcessor):
+        """Handles Amazon SageMaker processing tasks for jobs using XGBoost containers."""
+
         estimator_cls = XGBoost
 
         def __init__(
@@ -646,6 +711,19 @@ python {entry_point} "$@"
             tags: Optional[List[Dict[str, Any]]] = None,
             network_config: Optional[NetworkConfig] = None,
         ):
+            """This processor executes a Python script in an XGBoost execution environment.
+
+            Unless ``image_uri`` is specified, the XGBoost environment is an Amazon-built
+            Docker container that executes functions defined in the supplied ``entry_point``
+            Python script.
+
+            The arguments have the exact same meaning as in ``FrameworkProcessor``.
+
+            .. tip::
+
+                You can find additional parameters for initializing this class at
+                :class:`~smallmatter.ds.FrameworkProcessor`.
+            """
             super().__init__(
                 self.estimator_cls,
                 framework_version,
