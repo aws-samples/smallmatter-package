@@ -8,7 +8,12 @@ from sagemaker.estimator import Framework
 from sagemaker.processing import ProcessingOutput
 
 from smallmatter.pathlib import S3Path
-from smallmatter.sm import FrameworkProcessor
+
+try:
+    # To test the forked-version of the SageMaker Python SDK
+    from sagemaker.processing import FrameworkProcessor
+except ImportError:
+    from smallmatter.sm import FrameworkProcessor
 
 
 def main_framework_processor(
@@ -121,6 +126,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     logger.info("Script configuration: {}", vars(args))
+    logger.info("Framework processor: {}.{}", FrameworkProcessor.__module__, FrameworkProcessor.__name__)
 
     if args.cls_type == "framework_processor":
         logger.info("Running FrameworkProcessor with estimator {}", args.framework_cls)

@@ -26,6 +26,11 @@ declare -a ARGS=(
     --framework_version 1.6.0
     smallmatter.sm.MXNetProcessor
 
+    # Flags to use MXNet processor in the forked-version of SageMaker SDK
+    #--framework_version 1.6.0
+    #sagemaker.mxnet.processing.MXNetProcessor
+
+
     # Flags for PyTorch processor
     #--framework_version 1.6.0
     #smallmatter.sm.PyTorchProcessor
