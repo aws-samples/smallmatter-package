@@ -1,5 +1,7 @@
 """Core data-science utilities."""
+import ast
 import csv
+import json
 import math
 import warnings
 from io import BytesIO
@@ -124,18 +126,19 @@ def json_np_converter(o: Union[np.int64, np.float64]) -> Union[int, float]:
     raise TypeError(f"Unknown instance: {type(o)}")
 
 
-def safe_pystr2json(s) -> str:
+def pystr2json(s) -> str:
     """Convert single-quoted "JSON" string to a double-quoted JSON string.
 
     Typical use-case: we receive input string `s = "['a', 'b', 'c']"`, which
     were generated essentially by `str(["a", "b", "c"])` and we cannot change
-    this part. We can convert the single quotes to double quotes to become a
-    valid JSON string. Callers can then deserialized the returned JSON string
-    to a Python object using ``json.loads()``.
+    this part. However, we would still like to convert these strings to valid,
+    double-quoted JSON strings for downstreams.
 
-    This implementation relies on [Black](https://github.com/psf/black) as
-    opposed to using `eval()` directly on input string ``s``, to make sure that
-    input string contains only JSON payload (i.e., only data, and no code).
+    This implementation relies on ``ast.literal_eval()``. Note that the resulted
+    double-quoted string is NOT guaranteed to be a valid JSON string, as clearly
+    stated by ``ast.literal_eval()`` documentation where it can yield these
+    "Python literal structures: strings, bytes, numbers, tuples, lists, dicts,
+    sets, booleans, and None."
 
     As an example, first we generate synthetic .csv file:
 
@@ -156,8 +159,8 @@ def safe_pystr2json(s) -> str:
     apple,"['red', 'green', 'blue']"
     orange,"['R', 'G', 'B']"
 
-    Then, we read the .csv file and deserialize the single-quoted string in
-    the second column:
+    Then, we read the .csv file, and show an simple example of downstream task,
+    which is to deser the JSON string in the second column to an object:
 
     >>> df = pd.read_csv('/tmp/test-pystr2json.csv', low_memory=False)
     >>> df
@@ -172,14 +175,14 @@ def safe_pystr2json(s) -> str:
     ...
     JSONDecodeError: Expecting value: line 1 column 2 (char 1)
 
-    >>> # Convert python string to JSON string,
-    >>> df['b_json'] = df['b'].apply(lambda s: safe_pystr2json(s))
+    >>> # Convert python string to JSON string.
+    >>> df['b_json'] = df['b'].apply(lambda s: pystr2json(s))
     >>> df
             a                         b                    b_json
     0   apple  ['red', 'green', 'blue']  ["red", "green", "blue"]
     1  orange           ['R', 'G', 'B']           ["R", "G", "B"]
 
-    >>> # then deserialize JSON strings to Python objects
+    >>> # Sample downstream task: deserialize JSON strings to Python objects
     >>> df['b_obj'] = df['b_json'].apply(lambda s: json.loads(s))
     >>> df[['a', 'b_obj']]
             a               b_obj
@@ -189,16 +192,7 @@ def safe_pystr2json(s) -> str:
     >>> type(df.loc[0, 'b_obj'])
     list
     """
-    from black import FileMode, format_str
-
-    # Set line_length to have Black reformats the input string to a single line.
-    #
-    # Otherwise, when reformatted to multiple lines, Black adds trailing commas
-    # to the last element in the list or dictionary, which breaks json.loads().
-    #
-    # Be generous with line_length for pathological cases where input strings
-    # contains lots of characters that need to be escaped (e.g., c => \\c)
-    return format_str(s, mode=FileMode(line_length=len(s) * 4)).rstrip()
+    return json.dumps(ast.literal_eval(s))
 
 
 class SimpleMatrixPlotter(object):
