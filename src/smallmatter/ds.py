@@ -126,7 +126,7 @@ def json_np_converter(o: Union[np.int64, np.float64]) -> Union[int, float]:
     raise TypeError(f"Unknown instance: {type(o)}")
 
 
-def pystr2json(s) -> str:
+def pystr2json(s: str) -> str:
     """Convert single-quoted "JSON" string to a double-quoted JSON string.
 
     Typical use-case: we receive input string `s = "['a', 'b', 'c']"`, which
