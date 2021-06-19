@@ -588,7 +588,7 @@ class CdfResult:
                 y_label="Cumulative Probability",
                 hover_tooltips={
                     f"cumprob": "@y",
-                    f"{y_unit}": f"@{y_unit}",
+                    f"{y_unit}": f"@{{{y_unit}}}",
                     f"{x_unit}": "@x",
                     "Here to left (aka cum-sum)": "@cum_sum",
                     "After here (aka right-hand side)": "@rhs",
