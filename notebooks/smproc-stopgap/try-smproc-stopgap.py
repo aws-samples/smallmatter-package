@@ -32,7 +32,7 @@ def main_framework_processor(
         role=role,
         instance_count=1,
         instance_type="ml.m5.large",
-        s3_prefix=str(s3_prefix),
+        code_location=str(s3_prefix),
     )
     logger.info("Container uri: {}", processor.image_uri)
 
@@ -46,7 +46,7 @@ def main_framework_processor(
         output_dst = f"{s3_prefix}/{job_name}/output"
 
     processor.run(
-        entry_point="processing.py",
+        code="processing.py",
         source_dir="./sourcedir",
         dependencies=["./dummy_util"],
         inputs=None,
@@ -73,7 +73,7 @@ def main_subclass(
         role=role,
         instance_count=1,
         instance_type="ml.m5.large",
-        s3_prefix=str(s3_prefix),
+        code_location=str(s3_prefix),
     )
     logger.info("Container uri: {}", processor.image_uri)
 
@@ -87,7 +87,7 @@ def main_subclass(
         output_dst = f"{s3_prefix}/{job_name}/output"
 
     processor.run(
-        entry_point="processing.py",
+        code="processing.py",
         source_dir="./sourcedir",
         dependencies=["./dummy_util"],
         inputs=None,
