@@ -524,3 +524,218 @@ def plot_binpat(
     plt.gca().set_yticks([])
     plt.gca().set_xticks([])
     plt.imshow(img, cmap="gray", interpolation="none")
+
+
+class CdfResult:
+    def __init__(self, cdf_count_name: str, stats_df: pd.DataFrame, cdf: Dict[str, pd.DataFrame]) -> None:
+        self.stats_df = stats_df
+        self.cdf = cdf
+        self.cdf_count_name = self._probe_cdf_count_name()
+
+    @staticmethod
+    def renamer_cnt(s: str) -> str:
+        return f"{s}_cnt"
+
+    def _probe_cdf_count_name(self) -> str:
+        names = {cdf_df.columns[0] for cdf_df in self.cdf.values()}
+        assert len(names) == 1
+        return names.pop()
+
+    def save_reports(self, output_dir) -> None:
+        """Save the reports of a `CdfResult` instance.
+
+        This will save the intermediate stats as an .xlsx file, and each CDF as an .xlsx and an interactive .html.
+        """
+        from .bkh import BokehPlotter
+
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Terminologies (I mixed this quite alot, so I feel it warrants a dedicated commentary):
+        # - x-axis denote "x_unit / y_basic_unit", e.g., "date_cnt / item".
+        #   * x_unit comes from cdf_df.
+        #   * y_basic_unit comes from stats_df.
+        # - y-axis is the probability, and the raw count is y_unit, e.g., "item_cnt".
+        #   * y_unit comes from cdf_df.
+        #
+        # Grand example: x_unit="date_cnt", y_basic_unit="item", y_unit="item_cnt".
+        #
+        # When in doubt, see the sample dataframes in the docstring of cdf().
+        y_basic_unit = "#".join(self.stats_df.index.names)
+        y_unit = self.cdf_count_name
+
+        # Save the intermediate statistics
+        stats_fname = output_dir / f"stats-by-{y_basic_unit}.xlsx"
+        self.stats_df.to_excel(stats_fname, index=True, freeze_panes=(1, 1))
+
+        # Save the cdf statistics.
+
+        for col, cdf_df in self.cdf.items():
+            x_unit = cdf_df.index.name
+
+            # Save as table
+            self.cdf[col].to_excel(
+                output_dir / f"cdf-{x_unit}-per-{y_basic_unit}.xlsx", index=True, freeze_panes=(1, 0)
+            )
+
+            # Save as interactive html
+            bp = BokehPlotter(
+                self.cdf[col].reset_index().rename({col: "x", "cdf": "y"}, axis=1),
+                plot_width=960,
+                plot_height=480,
+                title=f"CDF of {x_unit} / {y_basic_unit}",
+                x_label=f"{x_unit} / {y_basic_unit}",
+                y_label="Cumulative Probability",
+                hover_tooltips={
+                    f"cumprob": "@y",
+                    f"{y_unit}": f"@{{{y_unit}}}",
+                    f"{x_unit}": "@x",
+                    "Here to left (aka cum-sum)": "@cum_sum",
+                    "After here (aka right-hand side)": "@rhs",
+                },
+            )
+            bp.gen_plot()
+            # bokeh.plotting.show(bp.plot)
+            bp.save_html(output_dir / f"cdf-{x_unit}-per-{y_unit}.html")
+
+
+def cdf(df, cdf_count_name="count", rename=CdfResult.renamer_cnt, **kwargs) -> CdfResult:
+    """For each group, compute the cdf of each column.
+
+    This is a convenience wrapper to `stats_by()` followed by a number of `get_cdf()` calls, and renaming of columns.
+    Use `rename` to customize the column names of the intermediate statistics, and `cdf_count_name` to customize the
+    `count` column name in the CDF dataframe.
+
+    Usage:
+
+    >>> items = ['ab', 'cd', 'ef', 'ef', 'ef']
+    >>> dates = ['2019-06-07', '2017-08-19', '2018-04-24', '2019-01-16', '2019-01-16']
+    >>> channels = ['c1', 'c2', 'c1', 'c2', 'c3']
+    >>> tags = ['t', 't', 't', 't', 't']
+    >>> df = pd.DataFrame({'item': items, 'date': dates, 'channel': channels, 'tag': tags})
+    >>> df
+      item        date channel tag
+    0   ab  2019-06-07      c1   t
+    1   cd  2017-08-19      c2   t
+    2   ef  2018-04-24      c1   t
+    3   ef  2019-01-16      c2   t
+    4   ef  2019-01-16      c3   t
+
+    >>> cdf_results = cdf(df, by='item', cdf_count_name='item_cnt', agg_funcs={'date': 'nunique', 'channel': 'nunique'})
+    >>> cdf_results.stats_df
+          date_cnt  channel_cnt
+    item
+    ab           1            1
+    cd           1            1
+    ef           2            3
+
+    >>> list(cdf_results.cdf)
+    ['date_cnt', 'channel_cnt']
+
+    >>> cdf_results.cdf['date']
+              item_cnt       cdf  cum_sum  rhs
+    date_cnt
+    1                2  0.666667        2    1
+    2                1  1.000000        3    0
+
+    >>> cdf_results.cdf['channel']
+                 item_cnt       cdf  cum_sum  rhs
+    channel_cnt
+    1                   2  0.666667        2    1
+    3                   1  1.000000        3    0
+
+    Notice how only columns in `agg_funcs` are in the results.
+
+    Args:
+        df (pd.DataFrame): [description]
+        by ([type]): as in pandas.DataFrame.groupby()
+        rename ([type]): as in pandas.DataFrame()
+        kwargs ([type]): see `stats_by()`
+
+    Returns:
+        Dict[str, pd.DataFrame]: {'colname': cdf_dataframe returned by get_cdf()}
+    """
+    stats_df = stats_by(df, rename=rename, **kwargs)
+    cdf_results: Dict[str, pd.DataFrame] = {}
+    for col in stats_df.columns:
+        raw_cnt: pd.Series = stats_df[col].reset_index().groupby(by=col).count().iloc[:, 0]
+        cdf_results[col] = get_cdf(raw_cnt)
+        if cdf_count_name != "count":
+            cdf_results[col] = cdf_results[col].rename({"count": cdf_count_name}, axis=1)
+
+    return CdfResult(cdf_count_name, stats_df, cdf_results)
+
+
+################################################################################
+# Low-level functions to support cdf functions
+################################################################################
+def stats_by(df: pd.DataFrame, by, agg_funcs, rename={}) -> pd.DataFrame:
+    """For each group, compute the aggregate statistics for columns.
+
+    >>> items = ['ab', 'cd', 'ef', 'ef', 'ef']
+    >>> dates = ['2019-06-07', '2017-08-19', '2018-04-24', '2019-01-16', '2019-01-16']
+    >>> channels = ['c1', 'c2', 'c1', 'c2', 'c3']
+    >>> df = pd.DataFrame({'item': items, 'date': dates})
+    >>> df
+      item        date channel
+    0   ab  2019-06-07      c1
+    1   cd  2017-08-19      c2
+    2   ef  2018-04-24      c1
+    3   ef  2019-01-16      c2
+    4   ef  2019-01-16      c3
+
+    >>> stats_by(df, by='item', agg_funcs={'date': 'nunique'}, rename={'date': 'day_cnt'})
+          day_cnt
+    item
+    ab          1
+    cd          1
+    ef          2
+
+    Notice how only columns in `agg_funcs` are in the results.
+
+    Args:
+        df (pd.DataFrame): [description]
+        by ([type]): as in see pandas.DataFrame.groupby()
+        agg_funcs ([type]): as in pandas.DataFrame.agg()
+        rename ([type]): as in pandas.DataFrame.rename(mapper=...)
+
+    Returns:
+        pd.DataFrame: [description]
+    """
+    return df.groupby(by=by).agg(agg_funcs).rename(mapper=rename, axis=1)
+
+
+def get_cdf(raw_cnt: pd.Series) -> pd.DataFrame:
+    """Compute CDF and related metrics from a Pandas Series.
+
+    Typically used in conjuction with `stats_df`.
+
+    >>> stats_df = stats_by(df, by='item', agg_funcs={'date': 'nunique'}, rename={'date': 'day_cnt'})
+    >>> stats_df
+          day_cnt
+    item
+    ab          1
+    cd          1
+    ef          2
+
+    >>> raw_cnt_df = stats_df['day_cnt'].reset_index().groupby(by='day_cnt').count()
+    >>> raw_cnt_df
+             item
+    day_cnt
+    1           2
+    2           1
+
+    >>> cdf_df = get_cdf(raw_cnt_df.iloc[:, 0])
+    >>> cdf_df
+             count       cdf  cum_sum  rhs
+    day_cnt
+    1            2  0.666667        2    1
+    2            1  1.000000        3    0
+    """
+    # CDF
+    cum_sum = raw_cnt.cumsum()
+    cdf = cum_sum / cum_sum.iloc[-1]
+
+    # Right-hand side
+    rhs = cum_sum.iloc[-1] - cum_sum
+    return pd.DataFrame({"count": raw_cnt, "cdf": cdf, "cum_sum": cum_sum, "rhs": rhs})

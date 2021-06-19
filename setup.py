@@ -21,7 +21,7 @@ required_packages: List[str] = ["s3fs"]
 # Specific use case dependencies
 extras = {
     "sm": ["sagemaker"],
-    "ds": ["pandas", "matplotlib"],
+    "ds": ["pandas", "matplotlib", "openpyxl", "msoffcrypto-tool"],
     "lambda.s3": ["boto3-stubs[s3]"],
 }
 all_deps = required_packages.copy()
