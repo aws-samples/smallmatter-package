@@ -94,6 +94,11 @@ def pathify(path: Union[str, Path, PathLike], *args, **kwargs) -> Path2:
 class S3Path(Path2):
     """A path to S3 object."""
 
+    def __init__(self, path):
+        super(S3Path, self).__init__()
+        self.fs = s3fs.S3FileSystem(anon=False)
+        self.s3path = path
+
     _flavour = _s3_flavour
     __slots__ = ()
 
@@ -175,7 +180,13 @@ class S3Path(Path2):
 
     def glob(self, pattern):
         """Yield all children (including directories) matching the given relative pattern."""
-        raise NotImplementedError()
+        if not pattern:
+            raise ValueError("Unacceptable pattern: {!r}".format(pattern))
+
+        pattern = self.s3path + pattern
+        files = self.fs.glob(pattern)
+        for p in files:
+            yield S3Path(p)
 
     def __str__(self):
         """Return the string representation of the path with the s3:// schema.
