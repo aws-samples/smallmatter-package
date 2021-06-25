@@ -175,7 +175,13 @@ class S3Path(Path2):
 
     def glob(self, pattern):
         """Yield all children (including directories) matching the given relative pattern."""
-        raise NotImplementedError()
+        if not pattern:
+            raise ValueError("Unacceptable pattern: {!r}".format(pattern))
+
+        pattern = self.__str__() + "/" + pattern
+        files = self._accessor.glob(pattern)
+        for p in files:
+            yield S3Path(p)
 
     def __str__(self):
         """Return the string representation of the path with the s3:// schema.
