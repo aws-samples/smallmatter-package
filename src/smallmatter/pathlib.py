@@ -178,7 +178,7 @@ class S3Path(Path2):
         if not pattern:
             raise ValueError("Unacceptable pattern: {!r}".format(pattern))
 
-        pattern = self.s3path + pattern
+        pattern = self.__str__() + "/" + pattern
         files = self._accessor.glob(pattern)
         for p in files:
             yield S3Path(p)
