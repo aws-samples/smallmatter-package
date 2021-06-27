@@ -99,9 +99,17 @@ def fill_dt(
 ) -> pd.DataFrame:
     """Make sure each timeseries has contiguous days, then optionally downsampled.
 
-    Dataframe must either has column "x", or indexed with "x" only.
+    Notes the semantic of this function:
+    - the input dataframe `df` must have either column "x", or indexed with "x" only.
+    - number columns undergo the `pd.DataFrame.fillna` procedure.
+    - a non-number column is assumed to be a categorical feature of the whole timeseries (and NOT of
+      a timestamp). In other words, each non-number column equals to what gluonts calls as
+      "static category feature": given a timeseries which is 1+ rows, the value of this column on
+      all the rows are the same. If the input ``df`` mistakenly assigns multiple values to this
+      column, then this function will use the value of the first input row in the output dataframe.
 
     Arguments:
+        df (pd.DataFrame): an input dataframe consisting of only one sparse timeseries.
         dates (pd.DatetimeIndex or Tuple[str, str, str]): new timestamp index.
             - If `pd.DatetimeIndex`, then this is typically created by
               ``pd.date_range("yyyy-mm-dd", "yyyy-mm-dd", freq="D"))``.
