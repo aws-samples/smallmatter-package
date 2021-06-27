@@ -1,3 +1,4 @@
+"""Given a .csv file, plot every timeseries in it into 10x10 montages and individual plots."""
 import argparse
 import csv
 import json
@@ -24,7 +25,39 @@ TsidDeser = Union[str, List[str]]
 Tsid = List[str]
 
 
-def get_tsid(s: str) -> Tsid:
+def gen_sample_data() -> pd.DataFrame:
+    """Generate a sample input dataframe.
+
+    Call this function to generate a sample dataframe which you can then save as a .csv file.
+    """
+    # June 2021
+    # Su Mo Tu We Th Fr Sa
+    #        1  2  3  4  5
+    #  6  7  8  9 10 11 12
+    # 13 14 15 16 17 18 19
+    # 20 21 22 23 24 25 26
+    # 27 28 29 30
+    return pd.DataFrame(
+        {
+            "sku": ["item-a", "item-a", "item-a", "item-a", "item-a", "item-b", "item-b", "item-b", "item-b"],
+            "loc": ["city-1", "city-1", "city-1", "city-1", "city-1", "city-2", "city-2", "city-2", "city-2"],
+            "date": [
+                "2021-06-02",
+                "2021-06-04",
+                "2021-06-17",
+                "2021-06-28",
+                "2021-06-29",
+                "2021-06-09",
+                "2021-06-16",
+                "2021-06-18",
+                "2021-06-24",
+            ],
+            "qty": [10, 50, 30, 5, 15, 5, 50, 10, 20],
+        }
+    )
+
+
+def _get_tsid(s: str) -> Tsid:
     tsid_deser: TsidDeser = json.loads(s)
     tsid_cols: Tsid = [tsid_deser] if isinstance(tsid_deser, str) else tsid_deser
     return tsid_cols
@@ -40,11 +73,11 @@ def _prep_output_dirs(prefix: Path):
 def main(
     output_dir: Path2,
     input: Path2,
+    start: str,
     kind: str = "event",
     x: str = "x",
     y: str = "y",
     tsid_json: str = '"tsid"',
-    start: str = "2017-01-01",
     end: str = datetime.today().strftime("%Y-%m-%d"),
     freq: str = "W",
     transparent: bool = False,
@@ -52,21 +85,34 @@ def main(
 ) -> None:
     """Plot all timeseries.
 
-    Usage::
+    Usage #1 - plot demand timeseries (i.e., missing timestamp means zero quantity)::
 
         python -m smallmatter.ts.plot_all \
-            test/refdata/plot_all_ts.csv \
-            -x replen_date \
+            my_all_ts.csv \
+            --start 2021-06-01 \
+            --end 2021-06-30 \
+            -x date \
             -y qty \
-            --tsid '["sku", "location"]'
+            --tsid '["sku", "loc"]'
+
+    Usage #2 - plot prices timeseries (i.e., missing timestamp means value same as previous)::
+
+        python -m smallmatter.ts.plot_all \
+            my_all_ts.csv \
+            --kind level \
+            --start 2021-06-01 \
+            --end 2021-06-30 \
+            -x date \
+            -y qty \
+            --tsid '["sku", "loc"]'
 
     Args:
         output_dir (Path2): Output directory.
         input (Path2): Filename of input .csv.
+        start (str, optional): Start date in YYYY-MM-DD format.
         x (str, optional): Column name for timestamp (i.e., x-axis). Defaults to "x".
         y (str, optional): Column name for y-axis. Defaults to "y".
         tsid_json (str, optional): Columns for timeseries identifier in JSON format. Defaults to '"tsid"'.
-        start (str, optional): Start date in YYYY-MM-DD format. Defaults to "2017-01-01".
         end (str, optional): End date in YYYY-MM-DD format. Defaults to today.
         freq (str, optional): Frequency used in the plots. Defaults to "W".
         transparent (bool, optional): Whether to use transparent background. Defaults to False.
@@ -98,7 +144,7 @@ def main(
         pp.pprint(metadata, stream=f)
 
     # Read input .csv
-    tsid = get_tsid(tsid_json)
+    tsid = _get_tsid(tsid_json)
     df = pd.read_csv(
         input,
         dtype={col: str for col in tsid},
@@ -121,10 +167,6 @@ def main(
             "fillna_kwargs": dict(method="ffill"),
             "resample": "max",
         }
-
-    # FIXME: to confirm removal
-    # "Canvas" for individual plot
-    # fig, ax = plt.subplots(figsize=(6.4, 4.8), dpi=100, tight_layout=True)
 
     # Mapping file
     f = (output_dir / "mappings.csv").open("w")
@@ -203,8 +245,7 @@ def create_argparse() -> argparse.ArgumentParser:
         "--start",
         metavar="YYYY-MM-DD",
         type=str,
-        default="2017-01-01",
-        help="Start date used in the plot (default: 2017-01-01)",
+        help="Start date used in the plot in yyyy-mm-dd format",
     )
     parser.add_argument(
         "-e",
@@ -212,7 +253,7 @@ def create_argparse() -> argparse.ArgumentParser:
         metavar="YYYY-MM-DD",
         type=str,
         default=datetime.today().strftime("%Y-%m-%d"),
-        help="End date used in the plot (default: today)",
+        help="End date used in the plot in yyyy-mm-dd format (default: today)",
     )
     parser.add_argument(
         "-f",
