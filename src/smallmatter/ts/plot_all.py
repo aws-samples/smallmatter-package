@@ -1,4 +1,7 @@
-"""Given a .csv file, plot every timeseries in it into 10x10 montages and individual plots."""
+"""Given a .csv file, plot every timeseries in it into 10x10 montages and individual plots.
+
+Note that `D` is the smallest frequency supported.
+"""
 import argparse
 import csv
 import json
@@ -80,6 +83,7 @@ def main(
     tsid_json: str = '"tsid"',
     end: str = datetime.today().strftime("%Y-%m-%d"),
     freq: str = "W",
+    resample: str = "auto",
     transparent: bool = False,
     create_output_dir: bool = True,
 ) -> None:
@@ -153,6 +157,7 @@ def main(
         low_memory=False,
     )
     # Squash multiple txn/day into a single day.
+    # TODO: to support sub-daily frequency, daily_agg_func needs to be updated.
     daily_agg_fun = "max" if kind.startswith("level") else "sum"
     df = df.groupby(by=[x, *tsid], as_index=False, group_keys=False).agg({y: daily_agg_fun})
 
@@ -163,10 +168,11 @@ def main(
     # Decide whether to plot event curve (e.g., demand) vs level curve (e.g., price)
     fill_dt_kwargs: Dict[str, Any] = {}
     if kind.startswith("level"):
-        fill_dt_kwargs = {
-            "fillna_kwargs": dict(method="ffill"),
-            "resample": "max",
-        }
+        fill_dt_kwargs = {"fillna_kwargs": dict(method="ffill")}
+        if resample == "auto":
+            fill_dt_kwargs["resample"] = "max"
+        else:
+            fill_dt_kwargs["resample"] = "last"
 
     # Mapping file
     f = (output_dir / "mappings.csv").open("w")
@@ -238,6 +244,19 @@ def create_argparse() -> argparse.ArgumentParser:
             '"Level2" means level curve with actual point overlay.'
         ),
     )
+    parser.add_argument(
+        "-r",
+        "--resample",
+        type=str,
+        default="auto",
+        help=(
+            'How to downsample high-frequency (e.g., "D") to low-frequency (e.g., "W"). When set to "auto", '
+            'use "sum" for demand timeseries (i.e., "--kind event"), and "max" for price-like '
+            'timeseries (i.e., "--kind level" or "--kind level2"). The later will plot the max price seen '
+            'in each coarser period. To plot the latest price in each coarser period instead, use "last". '
+            "Default: auto."
+        ),
+    )
 
     # Plot matters
     parser.add_argument(
@@ -264,7 +283,7 @@ def create_argparse() -> argparse.ArgumentParser:
         help="Frequency used in the plot (default: W)",
     )
     parser.add_argument(
-        "-r", "--transparent", action="store_true", default=False, help="Generate transparent backgrounds"
+        "-T", "--transparent", action="store_true", default=False, help="Generate transparent backgrounds"
     )
 
     return parser
