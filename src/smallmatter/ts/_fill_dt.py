@@ -4,7 +4,7 @@ file `src/gluonts_nb_utils/__init__.py`.
 The repo itself is part of an AWS blog post on
 [Demand Forecasting using Amazon SageMaker and GluonTS at Novartis AG (Part 4/4)](https://aws.amazon.com/blogs/industries/novartis-ag-uses-amazon-sagemaker-and-gluonts-for-demand-forecasting/).
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 
@@ -24,6 +24,8 @@ def fill_dt_all(df: pd.DataFrame, ts_id: List[str], **kwargs) -> pd.DataFrame:
 
     >>> # First, create a sample input dataframe of two sparse timeseries.
     >>> import pandas as pd
+    >>> from smallmatter.ts import fill_dt_all
+    >>>
     >>> df = pd.DataFrame({
     >>>         'sku': ['item-a', 'item-a', 'item-a', 'item-b', 'item-b'],
     >>>         'loc': ['city-01', 'city-01', 'city-01', 'city-02', 'city-02'],
@@ -90,12 +92,12 @@ def fill_dt_all(df: pd.DataFrame, ts_id: List[str], **kwargs) -> pd.DataFrame:
 
 
 def fill_dt(
-    df,
-    dates=pd.date_range("2017-01-01", "2019-12-31", freq="D"),
-    freq="D",
+    df: pd.DataFrame,
+    dates: Union[pd.DatetimeIndex, Tuple[str, str, str]],
+    freq: str = "D",
     fillna_kwargs: Optional[Dict[str, Any]] = None,
     resample: str = "sum",
-    resample_kwargs={},
+    resample_kwargs: Dict[str, Any] = {},
 ) -> pd.DataFrame:
     """Make sure each timeseries has contiguous days, then optionally downsampled.
 
@@ -117,12 +119,12 @@ def fill_dt(
               - ``dates[0]`` will be either string ``yyyy-mm-dd`` or string ``min``,
               - ``dates[1]`` will be either ``yyyy-mm-dd`` or string ``max``, and
               - ``dates[2]`` will be the frequency of the original index.
-        freq (str): after `df` is reindexed, further downsample to this freq.
+        freq (str): the output frequency. After `df` is reindexed, further downsample to this freq.
         fillna_kwargs (Dict[str, Any], optional):  Use None for demand, ``{ 'method': 'ffill'}`` for
             price. Defaults to None.
         resample_fn (str, optional): Set to ``sum`` for demand, ``max`` for price curves. Defaults
             to ``sum``.
-        resample_kwargs (dict, optional): [description]. Defaults to ``{}``.
+        resample_kwargs (Dict[str, Any], optional): [description]. Defaults to ``{}``.
 
     Returns:
         pd.DataFrame: a dataframe of a dense timeseries, where each row denotes a timestamp in
@@ -163,6 +165,7 @@ def fill_dt(
             daily_binpat[k] = v
     daily_binpat.index.name = df.index.name
 
+    # FIXME: should be: if output_freq == input_freq
     if freq == "D":
         return daily_binpat.reset_index()
 
