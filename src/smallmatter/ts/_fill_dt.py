@@ -70,7 +70,7 @@ def fill_dt_all(df: pd.DataFrame, ts_id: List[str], **kwargs) -> pd.DataFrame:
     3 2021-06-11   b  city-02  0.0
     4 2021-06-12   b  city-02  5.0
 
-    >>> # Reset index, if desired.
+    >>> # Optionally, reset the index of the output dataframe.
     >>> df_dense.reset_index(drop=True, inplace=True)
     >>> df_dense
 
@@ -125,7 +125,10 @@ def fill_dt(
         resample_kwargs (dict, optional): [description]. Defaults to ``{}``.
 
     Returns:
-        pd.DataFrame: a dataframe indexed by ``X``.
+        pd.DataFrame: a dataframe of a dense timeseries, where each row denotes a timestamp in
+            the timeseries, and the whole timeseries has contiguous timestamps according to the
+            requested frequency `freq`. If the input dataframe `df` is indexed by ``x``, then the
+            this ``x`` becomes a regular column in the output dataframe.
     """
     X = "x"
     if X in df.columns:
