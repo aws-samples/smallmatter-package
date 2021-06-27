@@ -61,6 +61,15 @@ certain single-file operations on Amazon S3.
   - `PyExec`: typical use-case: to implement data dictionary or config files
     that can mix-in Python code to construct certain variables.
 
+- `smallmatter.ts`: for rapid EDA on timeseries data.
+  - `fill_dt_all` and `fill_dt`: utilities to convert a long pandas dataframe
+    that consists of multiple sparse timeseries to another long pandas dataframe
+    that consists of multiple dense timeseries. In a long dataframe format, each
+    timeseries is denoted by multiple rows, with each row denotes a timestamp.
+    A sparse timeseries is a collection of rows with "missing" timestamp, which
+    may represent "non event" or "missing measurement". A dense timeseries will
+    have a row for those "non-event" timestamp with specific value (e.g., 0).
+
 - `bin/pp.sh`: standard template to run `pandas-profiling`.
 
 ## Installation
