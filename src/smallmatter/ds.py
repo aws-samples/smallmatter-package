@@ -358,7 +358,7 @@ class MontagePager(object):
 
         >>> import pandas as pd
         >>>
-        >>> mp = MontagePlotter('output', savefig_kwargs=dict(transparent=TrueFalse))
+        >>> mp = MontagePlotter('output', savefig_kwargs=dict(transparent=False))
         >>> for i in range(128):
         >>>     title = f"chart-{i:04d}"
         >>>     pd.Series(rand(6)).plot(ax=mp.pop(title), title=title)
@@ -377,6 +377,10 @@ class MontagePager(object):
         self.path = path
         self.montage_path = path / "montages"
         self.individual_path = path / "individuals"
+        # Create directories (issue #15)
+        self.montage_path.mkdir(parents=True, exist_ok=True)
+        self.individual_path.mkdir(parents=True, exist_ok=True)
+
         self.prefix = prefix
         self.page_size = page_size
         self.smp_kwargs = kwargs
