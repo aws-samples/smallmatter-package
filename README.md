@@ -24,7 +24,7 @@ certain single-file operations on Amazon S3.
     the SageMaker managed framework containers (i.e., MXNet, PyTorch, TensorFlow,
     Scikit-learn, and XGBoost).
 
-    It aims to give you familiar workflow of (1) instantiate a processor, then
+    It aims to give you the familiar workflow of (1) instantiate a processor, then
     immediately (2) call the `run(...)` method.
 
     Here's an [example](`https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.py#L14-L53`)
@@ -46,19 +46,19 @@ certain single-file operations on Amazon S3.
 
 - `smallmatter.typecheck`: check possible dtypes of a csv file.
   - For each column, list the auto-detected dtypes. Useful to check data
-    for data qualities (e.g., mixed-in string and numbers in the same column).
+    for data qualities (e.g., mixed-in strings and numbers in the same column).
   - Generate html reports of the auto-detected dtypes.
   - CLI interface to generate those html reports.
 
 - `smallmatter.ds`: for rapid prototyping of some data science tasks.
-  - `SimpleMatrixPlotter`: a simpler helper class to fill-in supplot one after
+  - `SimpleMatrixPlotter`: a simpler helper class to fill-in subplots one after
     another.
   - `MontagePager`: a pager to group and save subplots into multiple montage
     image files.
   - `DFBuilder`: a helper class to build a Pandas dataframe incrementally,
     row-by-row.
   - `json_np_converter`: convert numpy values to JSON-compliant data type.
-  - `PyExec`: typical use-case: to implement data dictionary or config files
+  - `PyExec`: typical use-case: to implement a data dictionary or config files
     that can mix-in Python code to construct certain variables.
 
 - `bin/pp.sh`: standard template to run `pandas-profiling`.
