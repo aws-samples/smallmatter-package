@@ -128,8 +128,8 @@ class S3Path(Path2):
         raise NotImplementedError()
 
     def mkdir(self, *args, **kwargs):
+        """No-op: no actual S3 prefix created, and no bucket created even if parents=True."""
         self._try_raise_closed()
-        raise NotImplementedError()
 
     def read_bytes(self, *args, **kwargs):
         """Read bytes from file."""
