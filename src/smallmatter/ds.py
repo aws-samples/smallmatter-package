@@ -198,9 +198,11 @@ def pystr2json(s: str) -> str:
 class SimpleMatrixPlotter(object):
     """A simple helper class to fill-in subplot one after another.
 
-    Sample usage using add():
+    Sample usage using `add()`:
 
     >>> import pandas as pd
+    >>> from smallmatter.ds import SimpleMatrixPlotter
+    >>>
     >>> df = pd.DataFrame({'a': [1,1,1,2,2,2,3,3,3,4,4]})
     >>> gb = df.groupby(by=['a'])
     >>>
@@ -209,16 +211,16 @@ class SimpleMatrixPlotter(object):
     >>>     ax, _ = smp.add(df_group.plot)
     >>>     assert ax == _
     >>>     ax.set_title(f"Item={group_name}")
-    >>> # smp.trim(); plt.show()
+    >>> # smp.trim(); plt.tight_layout(); plt.show()  # Uncomment to show the plot.
     >>> smp.savefig("/tmp/testfigure.png")  # After this, figure & axes are gone.
 
-    Alternative usage using pop():
+    Alternative usage using `pop()`:
 
     >>> smp = SimpleMatrixPlotter(gb.ngroups)
     >>> for group_name, df_group in gb:
     >>>     ax = smp.pop()
     >>>     df_group.plot(ax=ax, title=f"Item={group_name}")
-    >>> # smp.trim(); plt.show()
+    >>> # smp.trim(); plt.tight_layout(); plt.show()  # Uncomment to show the plot.
     >>> smp.savefig("/tmp/testfigure.png")  # After this, figure & axes are gone.
 
     Attributes:
@@ -331,8 +333,9 @@ class SimpleMatrixPlotter(object):
 # per figure dimension). The following benchmark to render 10 montages at 100 subplots/montage tops at 392MB RSS, when
 # measured on MBP early 2015 model, Mojave 10.14.6, python-3.7.6.
 #
-# from smallmatter.ds import MontagePager
 # import pandas as pd
+# from numpy.random import rand
+# from smallmatter.ds import MontagePager
 # mp = MontagePager()
 # for i in range(1000):
 #     title = f"chart-{i:04d}"
@@ -357,15 +360,15 @@ class MontagePager(object):
         to explicitly save the last montage.
 
         >>> import pandas as pd
+        >>> from pathlib import Path
+        >>> from numpy.random import rand
+        >>> from smallmatter.ds import MontagePager
         >>>
-        >>> mp = MontagePlotter('output', savefig_kwargs=dict(transparent=False))
+        >>> mp = MontagePager(Path('output'), savefig_kwargs=dict(transparent=False))
         >>> for i in range(128):
         >>>     title = f"chart-{i:04d}"
         >>>     pd.Series(rand(6)).plot(ax=mp.pop(title), title=title)
         >>> mp.savefig()  # Save the last montage which may be partially filled.
-
-        >>> mp = MontagePlotter('output', savefig_kwargs=dict(transparent=True))
-        >>> ...
 
         Args:
             prefix (str, optional): Prefix of output filenames. Defaults to "montage".
