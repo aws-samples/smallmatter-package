@@ -17,9 +17,9 @@ from PIL import Image, ImageChops
 
 from .pathlib import Path2, pathify
 
-# Silence warning due to pandas using deprecated matplotlib API.
+# Silence warning for some pandas version that uses deprecated matplotlib API.
 # See: https://github.com/pandas-dev/pandas/pull/32444
-warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
+warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation, module=r"^pandas\.")
 
 
 class DFBuilder(object):
@@ -265,12 +265,28 @@ class SimpleMatrixPlotter(object):
     @property
     def ncols(self):
         """Return the number of columns."""
-        return self.axes[0].get_geometry()[1] if len(self.axes) > 0 else 0
+        if len(self.axes) < 1:
+            return 0
+
+        ax = self.axes[0]
+        if hasattr(ax, "get_gridspec"):
+            # matplotlib>=3.4.0
+            return ax.get_gridspec().ncols
+        else:
+            return ax.get_geometry()[1]
 
     @property
     def nrows(self):
         """Return the number of rows."""
-        return self.axes[0].get_geometry()[0] if len(self.axes) > 0 else 0
+        if len(self.axes) < 1:
+            return 0
+
+        ax = self.axes[0]
+        if hasattr(ax, "get_gridspec"):
+            # matplotlib>=3.4.0
+            return ax.get_gridspec().nrows
+        else:
+            return ax.get_geometry()[0]
 
     @property
     def shape(self):
@@ -391,9 +407,13 @@ class MontagePager(object):
         self.savefig_kwargs = savefig_kwargs
         self.smp = SimpleMatrixPlotter(**self.smp_kwargs)
         self._i = 0
-        self.itemid: List[Any] = []
-        self.csvwriter = csv.writer((path / "mappings.csv").open("w"))
-        self.csvwriter.writerow(["individual", "title", "montage", "subplot", "row", "col"])
+        self._itemid: List[Any] = []
+        self._csv_file = (path / "mappings.csv").open("w")
+        self._csvwriter = csv.writer(self._csv_file)
+        self._csvwriter.writerow(["individual", "title", "montage", "subplot", "row", "col"])
+
+    def __del__(self):
+        self._csv_file.close()
 
     @property
     def i(self):
@@ -410,7 +430,7 @@ class MontagePager(object):
             self.savefig()
             self.smp = SimpleMatrixPlotter(**self.smp_kwargs)
             self._i += 1
-        self.itemid.append(subplot_id)
+        self._itemid.append(subplot_id)
         return self.smp.pop()
 
     def savefig(self):
@@ -431,23 +451,27 @@ class MontagePager(object):
             # 3.2.1 and 3.3.0).
             self.smp.savefig(buf, format="png", **self.savefig_kwargs)
             buf.seek(0)
-            im = Image.open(buf)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", Image.DecompressionBombWarning)
+                im = Image.open(buf)
             im.load()
 
         im.save(self.montage_path / f"{self.prefix}-{self._i:04d}.png")
         self._save_pieces(im, subplot_cnt, bg_rgb)
         self._save_csv()
+        im.close()
 
     def _save_csv(self):
         """Write row ["individual", "title", "montage-fname", "subplot-idx", "row", "col"]."""
         ncols = self.smp.ncols
         mtg_i = self._i
         mtg_fname = self.filename
-        for i, itemid in enumerate(self.itemid):
+        for i, itemid in enumerate(self._itemid):
             row, col = divmod(i, ncols)
             s = str(itemid).encode("unicode-escape").decode("utf-8")
-            self.csvwriter.writerow((f"{mtg_i:04d}-{i:02d}.png", s, mtg_fname, i, row, col))
-        self.itemid.clear()
+            self._csvwriter.writerow((f"{mtg_i:04d}-{i:02d}.png", s, mtg_fname, i, row, col))
+        self._itemid.clear()
+        self._csv_file.flush()
 
     def _save_pieces(
         self,
@@ -509,6 +533,7 @@ class MontagePager(object):
             cropped_fixed = im.crop(fixed_bbox(i))
             cropped_tight = tighten(cropped_fixed)
             cropped_tight.save(self.individual_path / f"{self._i:04d}-{i:02d}.png")
+            cropped_tight.close()
 
 
 def plot_binpat(
