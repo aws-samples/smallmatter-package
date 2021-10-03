@@ -201,10 +201,14 @@ class SimpleMatrixPlotter(object):
     Sample usage using `add()`:
 
     >>> import pandas as pd
+    >>> from matplotlib import pyplot as plt
     >>> from smallmatter.ds import SimpleMatrixPlotter
     >>>
     >>> df = pd.DataFrame({'a': [1,1,1,2,2,2,3,3,3,4,4]})
     >>> gb = df.groupby(by=['a'])
+    >>>
+    >>> # Disable matplotlib interactive plots (please see matplotlib documentation).
+    >>> plt.ioff()
     >>>
     >>> smp = SimpleMatrixPlotter(gb.ngroups)
     >>> for group_name, df_group in gb:
@@ -214,14 +218,13 @@ class SimpleMatrixPlotter(object):
     >>> # smp.trim(); plt.tight_layout(); plt.show()  # Uncomment to show the plot.
     >>> smp.savefig("/tmp/testfigure.png")  # After this, figure & axes are gone.
 
-    Alternative usage using `pop()`:
+    Alternative usage using `pop()` is shown below. Only show the relevant difference
+    with the for loop in the previous stanza:
 
     >>> smp = SimpleMatrixPlotter(gb.ngroups)
     >>> for group_name, df_group in gb:
     >>>     ax = smp.pop()
     >>>     df_group.plot(ax=ax, title=f"Item={group_name}")
-    >>> # smp.trim(); plt.tight_layout(); plt.show()  # Uncomment to show the plot.
-    >>> smp.savefig("/tmp/testfigure.png")  # After this, figure & axes are gone.
 
     Attributes:
         i (int): Index of the currently free subplot
@@ -376,9 +379,13 @@ class MontagePager(object):
         to explicitly save the last montage.
 
         >>> import pandas as pd
+        >>> from matplotlib import pyplot as plt
         >>> from pathlib import Path
         >>> from numpy.random import rand
         >>> from smallmatter.ds import MontagePager
+        >>>
+        >>> # Disable matplotlib interactive plots (please see matplotlib documentation).
+        >>> plt.ioff()
         >>>
         >>> mp = MontagePager(Path('output'), savefig_kwargs=dict(transparent=False))
         >>> for i in range(128):
@@ -534,6 +541,7 @@ class MontagePager(object):
             cropped_tight = tighten(cropped_fixed)
             cropped_tight.save(self.individual_path / f"{self._i:04d}-{i:02d}.png")
             cropped_tight.close()
+            cropped_fixed.close()
 
 
 def plot_binpat(
