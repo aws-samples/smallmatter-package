@@ -30,9 +30,15 @@ certain single-file operations on Amazon S3.
     Here's an [example](`https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.py#L14-L53`)
     on how to use this `FrameworkProcessor` class -- right now, the example is
     a `.py` file as opposed to `.ipynb`. Run the Python example using
-    [this shell script](https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.sh),
-    but you must first change the S3 prefix and execution role, then optionally
-    choose your prefered container.
+    [this shell script](https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.sh). You need to update the shell  script S3 prefix and SageMaker execution role, and optionally choose your preferred framework container.
+    ```Python
+    --s3-prefix <s3://bucket/prefix/sagemaker>
+    --role <arn:aws:iam::111122223333:role/service-role/my-amazon-sagemaker-execution-role-1234>
+    
+    # Optional: Update with your preferred container, it is Pytorch here
+    --framework_version 1.6.0
+    sagemaker.pytorch.estimator.PyTorch
+    ```
 
     It slightly changes the processing API by adding a SageMaker Framework
     estimator, which was done for two purposes: (1) auto-detect container uri,
