@@ -20,7 +20,7 @@ certain single-file operations on Amazon S3.
   - `smallmatter.sm.FrameworkProcessor`: a prototype to support SageMaker
     Python processing jobs that accept multiple files. This is done through
     `source_dir`, `depedencies`, `requirements.txt`, and `git_config`, similar
-    to SageMaker estimator APIs. Furthermoe, this `FrameworkProcessor` supports
+    to SageMaker estimator APIs. Furthermore, this `FrameworkProcessor` supports
     the SageMaker managed framework containers (i.e., MXNet, PyTorch, TensorFlow,
     Scikit-learn, and XGBoost).
 
