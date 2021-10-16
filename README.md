@@ -1,4 +1,4 @@
-## smallmatter Python package
+# smallmatter Python package
 
 Wrappers to streamline data-science tasks using Python toolkits (such as pandas,
 matplotlib, etc.).
@@ -30,11 +30,14 @@ certain single-file operations on Amazon S3.
     Here's an [example](`https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.py#L14-L53`)
     on how to use this `FrameworkProcessor` class -- right now, the example is
     a `.py` file as opposed to `.ipynb`. Run the Python example using
-    [this shell script](https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.sh). You need to update the shell  script S3 prefix and SageMaker execution role, and optionally choose your preferred framework container.
+    [this shell script](https://github.com/aws-samples/smallmatter-package/blob/main/notebooks/smproc-stopgap/try-smproc-stopgap.sh).
+    You need to update the shell script S3 prefix and SageMaker execution role,
+    and optionally choose your preferred framework container.
+
     ```Python
     --s3-prefix <s3://bucket/prefix/sagemaker>
     --role <arn:aws:iam::111122223333:role/service-role/my-amazon-sagemaker-execution-role-1234>
-    
+
     # Optional: Update with your preferred container, it is Pytorch here
     --framework_version 1.6.0
     sagemaker.pytorch.estimator.PyTorch
