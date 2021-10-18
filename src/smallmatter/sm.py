@@ -1,4 +1,5 @@
 from pathlib import Path
+from time import sleep
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from botocore.credentials import AssumeRoleCredentialFetcher
@@ -106,6 +107,78 @@ def get_model_tgz(train_job_name: str, sm: Optional[Any] = None) -> S3Path:
     # Given string s3://bucket/.../output/model.tar.gz, pick only "bucket/.../output/" (with trailing /)
     s3_prefix = resp["ModelArtifacts"]["S3ModelArtifacts"]
     return S3Path(s3_prefix[len("s3://") :])
+
+
+def search_training_jobs_with_prefix(
+    prefix: str,
+    sm: Optional[Any] = None,
+    delay: float = 0.2,
+) -> List[Dict[str, Any]]:
+    """Get the training jobs whose name starts with `prefix`.
+
+    Args:
+        prefix (str): Prefix of training job.
+        sm (optional): boto3.client for sagemaker. Defaults to None.
+        delay (float, optional): the delay (in seconds) between successive requests when search results exceed 100.
+            Defaults to 0.2 second.
+
+    Returns:
+        List: List of training jobs. This corresponds to the ``response["Results"][0]["TrainingJob"]`` returned by
+            `boto3.sagemaker.search()`.
+    """
+    return [
+        train_job
+        for train_job in search_training_jobs_with_substring(prefix, sm)
+        if train_job["TrainingJobName"].startswith(prefix)
+    ]
+
+
+def search_training_jobs_with_substring(
+    substring: str,
+    sm: Optional[Any] = None,
+    delay: float = 0.2,
+) -> List[Dict[str, Any]]:
+    """Get the training jobs whose name contains `substring`.
+
+    Args:
+        prefix (str): Substring of training job name.
+        sm (optional): boto3.client for sagemaker. Defaults to None.
+        delay (float, optional): the delay (in seconds) between successive requests when search results exceed 100.
+            Defaults to 0.2 second.
+    Returns:
+        List: List of training jobs. This corresponds to the ``response["Results"][0]["TrainingJob"]`` returned by
+            `boto3.sagemaker.search()`.
+    """
+    if sm is None:
+        # NOTE: use boto3 instead of sagemaker sdk to minimize dependency.
+        import boto3
+
+        sm = boto3.client(service_name="sagemaker")
+
+    search_params = {
+        "Resource": "TrainingJob",
+        "SearchExpression": {
+            "Filters": [
+                {
+                    "Name": "TrainingJobName",
+                    "Operator": "Contains",
+                    "Value": substring,
+                }
+            ]
+        },
+    }
+
+    results = []
+    while True:
+        resp = sm.search(**search_params)
+        results.extend(resp["Results"])
+        next_token = resp.get("NextToken", None)
+        if next_token is None:
+            break
+        search_params["NextToken"] = next_token
+        sleep(delay)
+
+    return [result["TrainingJob"] for result in results]
 
 
 try:
