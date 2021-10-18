@@ -138,7 +138,7 @@ def search_completed_processing_jobs_with_substring(
     job_summaries = []
     list_params = dict(NameContains=substring, StatusEqual="Completed")
     while True:
-        resp = sm.list_processing_jobs(list_params)
+        resp = sm.list_processing_jobs(**list_params)
         job_summaries.extend(resp)
         next_token = resp.get("NextToken", None)
         if next_token is None:
