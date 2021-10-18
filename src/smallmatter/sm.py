@@ -131,15 +131,19 @@ def search_completed_processing_jobs_with_substring(
     if sm is None:
         # NOTE: use boto3 instead of sagemaker sdk to minimize dependency.
         import boto3
+        from botocore.config import Config
 
-        sm = boto3.client(service_name="sagemaker")
+        sm = boto3.client(
+            service_name="sagemaker",
+            config=Config(connect_timeout=5, read_timeout=60, retries={"max_attempts": 20, "mode": "adaptive"}),
+        )
 
     # Pass-01: retrieve job names
     job_summaries = []
-    list_params = dict(NameContains=substring, StatusEqual="Completed")
+    list_params = dict(NameContains=substring, StatusEquals="Completed")
     while True:
         resp = sm.list_processing_jobs(**list_params)
-        job_summaries.extend(resp)
+        job_summaries.extend(resp["ProcessingJobSummaries"])
         next_token = resp.get("NextToken", None)
         if next_token is None:
             break
