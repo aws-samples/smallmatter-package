@@ -109,6 +109,58 @@ def get_model_tgz(train_job_name: str, sm: Optional[Any] = None) -> S3Path:
     return S3Path(s3_prefix[len("s3://") :])
 
 
+def search_completed_processing_jobs_with_substring(
+    substring: str,
+    prefix: bool = True,
+    sm: Optional[Any] = None,
+    delay: float = 0.2,
+) -> List[Dict[str, Any]]:
+    """Get the processing jobs whose name contains `substring`.
+
+    Args:
+        substring (str): Substring of processing job name.
+        prefix (bool, optional): Whether substring must be the prefix. Defaults to True.
+        sm (optional): boto3.client for sagemaker. Defaults to None.
+        delay (float, optional): the delay (in seconds) between successive requests when SageMaker
+            truncate search results. Defaults to 0.2 second.
+    Returns:
+        List: List of processing jobs. This corresponds to the concatenation of
+            ``response["ProcessingJobSummaries"][0]`` returned by `boto3.sagemaker.list_processing_jobs()`, with
+            ``response`` returned by `boto3.sagemaker.describe_processing_job()`.
+    """
+    if sm is None:
+        # NOTE: use boto3 instead of sagemaker sdk to minimize dependency.
+        import boto3
+
+        sm = boto3.client(service_name="sagemaker")
+
+    # Pass-01: retrieve job names
+    job_summaries = []
+    list_params = dict(NameContains=substring, StatusEqual="Completed")
+    while True:
+        resp = sm.list_processing_jobs(list_params)
+        job_summaries.extend(resp)
+        next_token = resp.get("NextToken", None)
+        if next_token is None:
+            break
+        list_params["NextToken"] = next_token
+        sleep(delay)
+
+    if prefix:
+        job_summaries = [
+            job_summary for job_summary in job_summaries if job_summary["ProcessingJobName"].startswith(substring)
+        ]
+
+    # Pass-02: for each job name, get the detail description.
+    results = []
+    for job_summary in job_summaries:
+        resp = sm.describe_processing_job(ProcessingJobName=job_summary["ProcessingJobName"])
+        results.extend(resp)
+        sleep(delay)
+
+    return results
+
+
 def search_training_jobs_with_prefix(
     prefix: str,
     sm: Optional[Any] = None,
