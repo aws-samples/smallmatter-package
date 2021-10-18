@@ -117,6 +117,8 @@ def search_completed_processing_jobs_with_substring(
 ) -> List[Dict[str, Any]]:
     """Get the processing jobs whose name contains `substring`.
 
+    Profiler reports are not be included in the search results.
+
     Args:
         substring (str): Substring of processing job name.
         prefix (bool, optional): Whether substring must be the prefix. Defaults to True.
@@ -126,7 +128,8 @@ def search_completed_processing_jobs_with_substring(
     Returns:
         List: List of processing jobs. This corresponds to the concatenation of
             ``response["ProcessingJobSummaries"][0]`` returned by `boto3.sagemaker.list_processing_jobs()`, with
-            ``response`` returned by `boto3.sagemaker.describe_processing_job()`.
+            ``response`` returned by `boto3.sagemaker.describe_processing_job()`. A new field is
+            also created: "ProcessingTimeInSeconds".
     """
     if sm is None:
         # NOTE: use boto3 instead of sagemaker sdk to minimize dependency.
@@ -140,7 +143,9 @@ def search_completed_processing_jobs_with_substring(
 
     # Pass-01: retrieve job names
     job_summaries = []
-    list_params = dict(NameContains=substring, StatusEquals="Completed")
+
+    list_params = dict(NameContains=substring, StatusEquals="Completed", MaxResults=100)
+
     while True:
         resp = sm.list_processing_jobs(**list_params)
         job_summaries.extend(resp["ProcessingJobSummaries"])
@@ -149,6 +154,11 @@ def search_completed_processing_jobs_with_substring(
             break
         list_params["NextToken"] = next_token
         sleep(delay)
+
+    # Drop profiler reports
+    job_summaries = [
+        job_summary for job_summary in job_summaries if "-ProfilerReport-" not in job_summary["ProcessingJobName"]
+    ]
 
     if prefix:
         job_summaries = [
@@ -159,42 +169,22 @@ def search_completed_processing_jobs_with_substring(
     results = []
     for job_summary in job_summaries:
         resp = sm.describe_processing_job(ProcessingJobName=job_summary["ProcessingJobName"])
-        results.extend(resp)
+        resp["ProcessingTimeInSeconds"] = (resp["ProcessingEndTime"] - resp["ProcessingStartTime"]).total_seconds()
+        results.append(resp)
         sleep(delay)
+
+    # Pass-03: add job duration
 
     return results
 
 
-def search_training_jobs_with_prefix(
-    prefix: str,
-    sm: Optional[Any] = None,
-    delay: float = 0.2,
-) -> List[Dict[str, Any]]:
-    """Get the training jobs whose name starts with `prefix`.
-
-    Args:
-        prefix (str): Prefix of training job.
-        sm (optional): boto3.client for sagemaker. Defaults to None.
-        delay (float, optional): the delay (in seconds) between successive requests when search results exceed 100.
-            Defaults to 0.2 second.
-
-    Returns:
-        List: List of training jobs. This corresponds to the ``response["Results"][0]["TrainingJob"]`` returned by
-            `boto3.sagemaker.search()`.
-    """
-    return [
-        train_job
-        for train_job in search_training_jobs_with_substring(prefix, sm)
-        if train_job["TrainingJobName"].startswith(prefix)
-    ]
-
-
-def search_training_jobs_with_substring(
+def search_completed_training_jobs_with_substring(
     substring: str,
+    prefix: bool = True,
     sm: Optional[Any] = None,
     delay: float = 0.2,
 ) -> List[Dict[str, Any]]:
-    """Get the training jobs whose name contains `substring`.
+    """Get the training jobs whose name contains `substring` either as prefix or anywhere.
 
     Args:
         prefix (str): Substring of training job name.
@@ -219,7 +209,12 @@ def search_training_jobs_with_substring(
                     "Name": "TrainingJobName",
                     "Operator": "Contains",
                     "Value": substring,
-                }
+                },
+                {
+                    "Name": "TrainingJobStatus",
+                    "Operator": "Equals",
+                    "Value": "Completed",
+                },
             ]
         },
     }
@@ -234,7 +229,10 @@ def search_training_jobs_with_substring(
         search_params["NextToken"] = next_token
         sleep(delay)
 
-    return [result["TrainingJob"] for result in results]
+    results = [result["TrainingJob"] for result in results]
+    if prefix:
+        results = [result for result in results if result["TrainingJobName"].startswith(substring)]
+    return results
 
 
 try:
