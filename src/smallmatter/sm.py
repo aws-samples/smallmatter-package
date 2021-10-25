@@ -109,6 +109,38 @@ def get_model_tgz(train_job_name: str, sm: Optional[Any] = None) -> S3Path:
     return S3Path(s3_prefix[len("s3://") :])
 
 
+def get_processor_output(processing_job_name: str, sm: Optional[Any] = None) -> Dict[str, S3Path]:
+    """Get the S3 paths of the output produced by a completed processing job.
+
+    Args:
+        processing_job_name (str): Name of processing job.
+        sm (optional): boto3.client for sagemaker. Defaults to None.
+
+    Returns:
+        Dict[str, S3Path: S3 path to the output
+    """
+    if sm is None:
+        # NOTE: use boto3 instead of sagemaker sdk to minimize dependency.
+        import boto3
+
+        sm = boto3.client("sagemaker")
+
+    resp: Dict[str, Any] = sm.describe_processing_job(ProcessingJobName=processing_job_name)
+
+    # Deal with not-completed job.
+    job_status = resp["ProcessingJobStatus"]
+    if job_status != "Completed":
+        raise ValueError(f"Processing job {processing_job_name} has status: {job_status}")
+
+    outputs = resp["ProcessingOutputConfig"]["Outputs"]
+    retval = {}
+    for output in outputs:
+        s3_uri = output["S3Output"]["S3Uri"]
+        retval[output["OutputName"]] = S3Path(s3_uri[len("s3://") :])
+
+    return retval
+
+
 def search_completed_processing_jobs_with_substring(
     substring: str,
     prefix: bool = True,
