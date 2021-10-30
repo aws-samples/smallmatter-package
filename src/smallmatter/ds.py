@@ -230,13 +230,13 @@ class SimpleMatrixPlotter(object):
         i (int): Index of the currently free subplot
     """
 
-    def __init__(self, ncols: Optional[int] = None, init_figcount: int = 5, figsize=(6.4, 4.8), dpi=100, **kwargs):
+    def __init__(self, figcount, ncols: Optional[int] = None, figsize=(6.4, 4.8), dpi=100, **kwargs):
         """Initialize a ``SimpleMatrixPlotter`` instance.
 
         Args:
-            ncols (int, optional): Number of columns. Passing None means to set to sqrt(init_figcount) clipped at
+            figcount (int): Total number of subplots.
+            ncols (int, optional): Number of columns. Passing None means to set to sqrt(figcount) clipped at
                 5 and 20. Defaults to None.
-            init_figcount (int, optional): Total number of subplots. Defaults to 5.
             figsize (tuple, optional): size per subplot, see ``figsize`` for matplotlib. Defaults to (6.4, 4.8).
             dpi (int, optional): dot per inch, see ``dpi`` in matplotlib. Defaults to 100.
             kwargs (optional): Keyword argumetns for plt.subplots, but these are ignored and will be overriden:
@@ -244,8 +244,8 @@ class SimpleMatrixPlotter(object):
         """
         # Initialize subplots
         if ncols is None:
-            ncols = min(max(5, int(math.sqrt(init_figcount))), 20)
-        nrows = init_figcount // ncols + (init_figcount % ncols > 0)
+            ncols = min(max(5, int(math.sqrt(figcount))), 20)
+        nrows = figcount // ncols + (figcount % ncols > 0)
 
         kwargs = {k: v for k, v in kwargs.items() if k not in {"nrows", "ncols", "figsize", "dpi"}}
         self.fig, _ = plt.subplots(
@@ -410,7 +410,7 @@ class MontagePager(object):
         self.prefix = prefix
         self.page_size = page_size
         self.smp_kwargs = kwargs
-        self.smp_kwargs["init_figcount"] = page_size
+        self.smp_kwargs["figcount"] = page_size
         self.savefig_kwargs = savefig_kwargs
         self.smp = SimpleMatrixPlotter(**self.smp_kwargs)
         self._i = 0
